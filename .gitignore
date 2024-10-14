@@ -1,1 +1,4 @@
 lightcast_env/
+
+# Compiled Python files
+*.pyc
