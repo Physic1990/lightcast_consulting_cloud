@@ -63,7 +63,7 @@ async def add_member(member: dict) -> dict:
         "data": { "Member added." }
     }
 
-#DELETE route for the members page - something's not working
+#DELETE route for the members page - BROKEN WITH CODE 422
 @app.delete("/members/{id}", tags=["members"])
 async def delete_member(memberID: int) -> dict:
     for member in team_members:

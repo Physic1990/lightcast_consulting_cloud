@@ -45,11 +45,10 @@ export default function Members() {
       <>
         <Form onFinish={handleSubmit}>
           <Form.Item<string>
-            // label="Member Name"
             name="name"
             rules={[{ required: true, message: "Add a member" }]}
           >
-            <Input />
+            <Input placeholder="Member Name" />
           </Form.Item>
         </Form>
       </>

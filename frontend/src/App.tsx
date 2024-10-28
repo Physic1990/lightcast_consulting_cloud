@@ -1,5 +1,6 @@
 //import { useState } from "react";
 import "./App.css";
+import FileSearch from "./components/FileSearch";
 import Header from "./components/Header";
 import Members from "./components/Members";
 
@@ -28,8 +29,9 @@ function App() {
     //   </p>
     // </>
     <>
-      <Header />
-      <Members />
+      <FileSearch />
+      {/* <Header />
+      <Members /> */}
     </>
   );
 }
