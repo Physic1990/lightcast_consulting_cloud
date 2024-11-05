@@ -1,9 +1,12 @@
 import Icon, {
+  EditFilled,
   FileOutlined,
   FolderOutlined,
   QuestionOutlined,
+  StarFilled,
+  ToolFilled,
 } from "@ant-design/icons";
-import { Button } from "antd";
+import { Button, Dropdown, MenuProps } from "antd";
 import { useEffect, useState } from "react";
 
 export default function DriveData() {
@@ -16,12 +19,43 @@ export default function DriveData() {
       .catch(() => console.error("Failed to get Drive data."));
   };
 
+  const items: MenuProps['items'] = [
+    {
+      key: '1',
+      label: (
+
+        <p>
+          <ToolFilled style={{marginRight: "10px"}}/>
+          Run the Model
+        </p>
+      )
+    },
+    {
+      key: '2',
+      label: (
+        <p>
+          <EditFilled style={{marginRight: "10px"}} />
+          Run Draft Operation
+        </p>
+      )
+    },
+    {
+      key: '3',
+      label: (
+        <p>
+          <StarFilled style={{marginRight: "10px"}} />
+          Run Deliverable Preparation
+        </p>
+      )
+    }
+  ];
+
   useEffect(() => {
     getDriveData();
   }, []);
 
   return (
-    <div>
+    <div >
       <h2 style={{ textAlign: "center", scale: "1.3" }}>
         Select a State and School
       </h2>
@@ -32,18 +66,24 @@ export default function DriveData() {
           backgroundColor: "#f7f7f7",
         }}
       >
-        <ul style={{ textAlign: "center" }}>
-          <Button className="lc_bt" size="large">
-            Model Type 1
-          </Button>
+        <ul style={{ textAlign: "center", alignContent: "center" }}>
+          <Dropdown menu={{items}}>
+            <Button className="lc_bt" size="large" style={{marginBottom: "10px", marginLeft: "-50px"}}>
+              Model Type 1
+            </Button>
+          </Dropdown>
           <br />
-          <Button className="lc_bt" size="large">
-            Model Type 2
-          </Button>
+          <Dropdown menu={{items}}>
+            <Button className="lc_bt" size="large" style={{marginBottom: "10px", marginLeft: "-50px"}}>
+              Model Type 2
+            </Button>
+          </Dropdown>
           <br />
-          <Button className="lc_bt" size="large">
-            Model Type 3
-          </Button>
+          <Dropdown menu={{items}}>
+            <Button className="lc_bt" size="large" style={{marginLeft: "-50px"}}>
+              Model Type 3
+            </Button>
+          </Dropdown>
         </ul>
       </div>
       <div
@@ -51,16 +91,17 @@ export default function DriveData() {
           display: "inline-block",
           width: "80%",
           textAlign: "center",
+          verticalAlign: "top",
+          marginTop: "25px"
         }}
       >
-        {/* <h2>Drive Data</h2> */}
         <div style={{ display: "flex" }}>
           {driveData.map((file) => (
             <div
               key={file.id}
               style={{
                 width: "30%",
-                background: "#f7f7f7",
+                // background: "#f7f7f7",
                 marginLeft: "5%",
                 height: "100%",
               }}
@@ -68,7 +109,7 @@ export default function DriveData() {
               {file.kind == "drive#folder" ? (
                 <FolderOutlined style={{ scale: "2" }} />
               ) : file.kind == "drive#file" ? (
-                <FileOutlined style={{ scale: "2" }} />
+                <FileOutlined style={{ scale: "2", cursor: "pointer" }} />
               ) : (
                 <QuestionOutlined style={{ scale: "2" }} />
               )}
