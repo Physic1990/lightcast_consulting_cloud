@@ -101,7 +101,6 @@ export default function DriveData() {
               key={file.id}
               style={{
                 width: "30%",
-                // background: "#f7f7f7",
                 marginLeft: "5%",
                 height: "100%",
               }}
