@@ -12,6 +12,9 @@ import { useEffect, useState } from "react";
 export default function DriveData() {
   const [driveData, setDriveData] = useState([]);
 
+  //Set selected file based on ID
+  const [selectedFile, setSelectedFile] = useState("");
+
   const getDriveData = async () => {
     await fetch("http://localhost:8000/drive_data?include_trashed=True")
       .then((response) => response.json())
@@ -53,6 +56,12 @@ export default function DriveData() {
   useEffect(() => {
     getDriveData();
   }, []);
+
+  const handleFileSelect = (id: string) => {
+    console.log(selectedFile)
+    console.log(id);
+    setSelectedFile(id);
+  }
 
   return (
     <div >
@@ -105,15 +114,18 @@ export default function DriveData() {
                 height: "100%",
               }}
             >
-              {file.kind == "drive#folder" ? (
-                <FolderOutlined style={{ scale: "2" }} />
-              ) : file.kind == "drive#file" ? (
-                <FileOutlined style={{ scale: "2", cursor: "pointer" }} />
-              ) : (
-                <QuestionOutlined style={{ scale: "2" }} />
-              )}
-              <br />
-              {file.name}
+              {/* <Button style={{all: "unset"}}> */}
+              <Button onClick={() => handleFileSelect(file.id)} color={file.id == selectedFile ? "primary" : "default"} style={{border: "none", scale: "2", cursor: "pointer", boxShadow: "none"}}>
+                {file.kind == "drive#folder" ? (
+                  <FolderOutlined />
+                ) : file.kind == "drive#file" ? (
+                  <FileOutlined />
+                ) : (
+                  <QuestionOutlined style={{ scale: "2" }} />
+                )}
+                <br />
+                {file.name}
+              </Button>
             </div>
           ))}
         </div>
