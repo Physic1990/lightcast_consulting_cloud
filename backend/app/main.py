@@ -84,6 +84,7 @@ credential_handler.get_creds()
 async def drive_data(include_trashed: bool = True):
     return drive.return_all_drive_data(include_trashed)
 
+# MIGHT NEED TO ADD FUNCTIONALITY TO SEARCH BY FILE ID
 @app.get("/search")
 async def search(file_name: str):
     return drive.search_file(file_name)
@@ -92,5 +93,18 @@ async def search(file_name: str):
 @app.get("/download")
 async def download(file_id: Union[str, None] = None, file_name: Union[str, None] = None):
     return drive.download_file(file_id, file_name)
+    
+#"""    
+@app.get("/socket")
+async def run_socket(arg1: int, arg2: int, script_file_name: str):
+    """
+    #Currently:
+    #Endpoint to execute the socket functionality.
+    #Accepts two integers and a script file name as query parameters.
+    """
+    # Call the socket function with the provided arguments
+    result = await drive.socket(arg1, arg2, script_file_name)
+    return {"message": "Socket operation completed", "result": result}
+#"""
 
 # Google Drive Server Access Implementation End
