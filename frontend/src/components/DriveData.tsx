@@ -142,7 +142,7 @@ export default function DriveData() {
                   style={
                     file.id == selectedFile
                       ? {
-                          border: "none",
+                          // border: "none",
                           scale: "1.5",
                           cursor: "pointer",
                           boxShadow: "none",
@@ -150,10 +150,11 @@ export default function DriveData() {
                           color: "white",
                         }
                       : {
-                          border: "none",
+                          // border: "none",
                           scale: "1.5",
                           cursor: "pointer",
                           boxShadow: "none",
+                          backgroundColor: "#f4f4f4"
                         }
                   }
                 >
