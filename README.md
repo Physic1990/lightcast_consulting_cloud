@@ -87,6 +87,13 @@ To stop the containers, press `CTRL+C` in the terminal where `docker-compose up`
 docker-compose down
 ```
 
+### For local helper
+Open new terminal and run the python script.
+```bash
+python3 local_helper.py
+```
+
+
 ### Rebuilding Containers
 
 If you make changes to the `Dockerfile` or dependencies, you may need to rebuild the images. Use the following command to rebuild without cache:
