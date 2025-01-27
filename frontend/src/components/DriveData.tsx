@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 export default function DriveData() {
   const [driveData, setDriveData] = useState([]);
 
+  // Function to get Drive data
   const getDriveData = async () => {
     await fetch("http://localhost:8000/drive_data?include_trashed=True")
       .then((response) => response.json())
@@ -19,35 +20,53 @@ export default function DriveData() {
       .catch(() => console.error("Failed to get Drive data."));
   };
 
-  const items: MenuProps['items'] = [
-    {
-      key: '1',
-      label: (
+  // Function to run the model
+  const runModel = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/run-local-model", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      console.log(data);
+      alert(`Processed Text: ${data.processed_text}`);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Failed to run the model.");
+    }
+  };
 
-        <p>
-          <ToolFilled style={{marginRight: "10px"}}/>
+  // Menu items with handlers
+  const items: MenuProps["items"] = [
+    {
+      key: "1",
+      label: (
+        <p onClick={runModel} style={{ cursor: "pointer" }}>
+          <ToolFilled style={{ marginRight: "10px" }} />
           Run the Model
         </p>
-      )
+      ),
     },
     {
-      key: '2',
+      key: "2",
       label: (
         <p>
-          <EditFilled style={{marginRight: "10px"}} />
+          <EditFilled style={{ marginRight: "10px" }} />
           Run Draft Operation
         </p>
-      )
+      ),
     },
     {
-      key: '3',
+      key: "3",
       label: (
         <p>
-          <StarFilled style={{marginRight: "10px"}} />
+          <StarFilled style={{ marginRight: "10px" }} />
           Run Deliverable Preparation
         </p>
-      )
-    }
+      ),
+    },
   ];
 
   useEffect(() => {
@@ -55,7 +74,7 @@ export default function DriveData() {
   }, []);
 
   return (
-    <div >
+    <div>
       <h2 style={{ textAlign: "center", scale: "1.3" }}>
         Select a State and School
       </h2>
@@ -67,20 +86,28 @@ export default function DriveData() {
         }}
       >
         <ul style={{ textAlign: "center", alignContent: "center" }}>
-          <Dropdown menu={{items}}>
-            <Button className="lc_bt" size="large" style={{marginBottom: "10px", marginLeft: "-50px"}}>
+          <Dropdown menu={{ items }}>
+            <Button
+              className="lc_bt"
+              size="large"
+              style={{ marginBottom: "10px", marginLeft: "-50px" }}
+            >
               Model Type 1
             </Button>
           </Dropdown>
           <br />
-          <Dropdown menu={{items}}>
-            <Button className="lc_bt" size="large" style={{marginBottom: "10px", marginLeft: "-50px"}}>
+          <Dropdown menu={{ items }}>
+            <Button
+              className="lc_bt"
+              size="large"
+              style={{ marginBottom: "10px", marginLeft: "-50px" }}
+            >
               Model Type 2
             </Button>
           </Dropdown>
           <br />
-          <Dropdown menu={{items}}>
-            <Button className="lc_bt" size="large" style={{marginLeft: "-50px"}}>
+          <Dropdown menu={{ items }}>
+            <Button className="lc_bt" size="large" style={{ marginLeft: "-50px" }}>
               Model Type 3
             </Button>
           </Dropdown>
@@ -92,7 +119,7 @@ export default function DriveData() {
           width: "80%",
           textAlign: "center",
           verticalAlign: "top",
-          marginTop: "25px"
+          marginTop: "25px",
         }}
       >
         <div style={{ display: "flex" }}>
@@ -101,14 +128,13 @@ export default function DriveData() {
               key={file.id}
               style={{
                 width: "30%",
-                // background: "#f7f7f7",
                 marginLeft: "5%",
                 height: "100%",
               }}
             >
-              {file.kind == "drive#folder" ? (
+              {file.kind === "drive#folder" ? (
                 <FolderOutlined style={{ scale: "2" }} />
-              ) : file.kind == "drive#file" ? (
+              ) : file.kind === "drive#file" ? (
                 <FileOutlined style={{ scale: "2", cursor: "pointer" }} />
               ) : (
                 <QuestionOutlined style={{ scale: "2" }} />
