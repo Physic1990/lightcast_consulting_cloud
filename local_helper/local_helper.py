@@ -25,7 +25,7 @@ def run_model_api():
 
 # Start Flask in a separate thread
 def start_flask():
-    app.run(port=9000, debug=False)
+    app.run(port=9000, debug=True)
 
 # GUI Application
 def start_gui():
@@ -52,5 +52,7 @@ def start_gui():
 
 # Run Flask server and GUI concurrently
 if __name__ == "__main__":
-    threading.Thread(target=start_flask, daemon=True).start()
-    start_gui()
+    # threading.Thread(target=start_flask, daemon=True).start()
+    threading.Thread(target=start_gui).start()
+    start_flask()
+    # start_gui()

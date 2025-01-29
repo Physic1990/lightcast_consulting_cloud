@@ -16,8 +16,9 @@ def return_all_drive_data(include_trashed = True):
     if query: # results exclude trash - this is not the default
         results = service.files().list(q = query).execute()
     else: # results include trash - this is the default
-        results = service.files().list().execute()
+        results = service.files().list(orderBy="folder").execute()
     items = results.get("files", [])
+    # print(items)
 
     if not items:
         print("No files found")

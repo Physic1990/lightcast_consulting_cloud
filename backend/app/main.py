@@ -103,7 +103,8 @@ logging.basicConfig(level=logging.INFO)
 def run_local_model():
     try:
         # Forward the request to the local helper app
-        response = requests.post("http://host.docker.internal:8000/run-model", timeout=5)
+        # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
+        response = requests.post("http://localhost:9000/run-model")
         response.raise_for_status()  # Raise an error if the request fails
         return response.json()  # Return the response from the local helper
     except requests.exceptions.RequestException as e:
