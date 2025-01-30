@@ -97,7 +97,8 @@ async def download(file_id: Union[str, None] = None, file_name: Union[str, None]
 # Google Drive Server Access Implementation End
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 @app.post("/run-local-model")
 def run_local_model():
@@ -105,8 +106,11 @@ def run_local_model():
         # Forward the request to the local helper app
         # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
         response = requests.post("http://localhost:9000/run-model")
+        print("Signal sent!")
         response.raise_for_status()  # Raise an error if the request fails
-        return response.json()  # Return the response from the local helper
+        returned_response = response.json()
+        print(returned_response)
+        return returned_response  # Return the response from the local helper
     except requests.exceptions.RequestException as e:
         # Handle any errors that occur
         raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")

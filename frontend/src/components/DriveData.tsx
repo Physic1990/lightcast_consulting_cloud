@@ -45,7 +45,7 @@ export default function DriveData() {
       .then((response) => response.json())
       .then((response) => console.log(response))
       .catch((error) => {
-        console.error("Error: ", error);
+        console.error("Error:", error);
         alert("Failed to run the model.");
       });
   };

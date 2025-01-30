@@ -21,6 +21,7 @@ def run_model(hardcoded_text):
 def run_model_api():
     hardcoded_text = "hello world"  # Hardcoded text
     response = run_model(hardcoded_text)
+    print(f"Signal received! Response:\n{response}")
     return jsonify(response)
 
 # Start Flask in a separate thread
