@@ -39,8 +39,6 @@ export default function DriveData() {
 
     await fetch("http://localhost:8000/run-local-model", {
       method: "POST",
-      mode: "no-cors",
-      // headers: { "Access-Control-Allow-Origin": "*" },
     })
       .then((response) => response.json())
       .then((response) => console.log(response))

@@ -23,7 +23,6 @@ def return_all_drive_data(include_trashed = True):
     if not items:
         print("No files found")
         return []
-    print("Files:")
     for i in items:
         print(u"{0} ({1})".format(i["name"], i["id"]))
 
@@ -39,7 +38,6 @@ def search_file(file_name):
     if not items:
         print("No files found")
         return []
-    print("Files:")
     for i in items:
         print(u"{0} ({1})".format(i["name"], i["id"]))
 
