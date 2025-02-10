@@ -27,4 +27,9 @@ async def search(file_name: str):
 async def download(file_id: Union[str, None] = None, file_name: Union[str, None] = None):
     return drive.download_file(file_id, file_name)
 
+@app.get("/drive_structure")
+async def drive_structure(folder_id: str = 'root'):
+    return drive.return_drive_structure(folder_id)
+
+
 # Google Drive Server Access Implementation End
