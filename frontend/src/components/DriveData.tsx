@@ -14,7 +14,7 @@ export default function DriveData() {
 
   //Set selected file based on ID
   const [selectedFile, setSelectedFile] = useState("");
-
+  // Function to get Drive data
   const getDriveData = async () => {
     await fetch("http://localhost:8000/drive_data?include_trashed=True")
       .then((response) => response.json())
@@ -25,11 +25,40 @@ export default function DriveData() {
       .catch(() => console.error("Failed to get Drive data."));
   };
 
+  // Function to run the model
+  const runModel = async () => {
+    // try {
+    //   const response = await fetch("http://localhost:8000/run-local-model", {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //   });
+    //   const data = await response.json();
+    //   console.log(data);
+    //   alert(`Processed Text: ${data.processed_text}`);
+    // } catch (error) {
+    //   console.error("Error:", error);
+    //   alert("Failed to run the model.");
+    // }
+
+    await fetch("http://localhost:8000/run-local-model", {
+      method: "POST",
+    })
+      .then((response) => response.json())
+      .then((response) => console.log(response))
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Failed to run the model.");
+      });
+  };
+
+  // Menu items with handlers
   const items: MenuProps["items"] = [
     {
       key: "1",
       label: (
-        <p>
+        <p onClick={runModel} style={{ cursor: "pointer" }}>
           <ToolFilled style={{ marginRight: "10px" }} />
           Run the Model
         </p>
