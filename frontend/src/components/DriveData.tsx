@@ -12,11 +12,16 @@ import { useEffect, useState } from "react";
 export default function DriveData() {
   const [driveData, setDriveData] = useState([]);
 
+  //Set selected file based on ID
+  const [selectedFile, setSelectedFile] = useState("");
   // Function to get Drive data
   const getDriveData = async () => {
     await fetch("http://localhost:8000/drive_data?include_trashed=True")
       .then((response) => response.json())
-      .then((response) => setDriveData(response))
+      .then((response) => {
+        setDriveData(response);
+        // console.log(response);
+      })
       .catch(() => console.error("Failed to get Drive data."));
   };
 
@@ -83,6 +88,12 @@ export default function DriveData() {
     getDriveData();
   }, []);
 
+  const handleFileSelect = (id: string) => {
+    console.log(selectedFile);
+    console.log(id);
+    setSelectedFile(id);
+  };
+
   return (
     <div>
       <h2 style={{ textAlign: "center", scale: "1.3" }}>
@@ -136,26 +147,65 @@ export default function DriveData() {
           marginTop: "25px",
         }}
       >
-        <div style={{ display: "flex" }}>
-          {driveData.map((file) => (
-            <div
-              key={file.id}
-              style={{
-                width: "30%",
-                marginLeft: "5%",
-                height: "100%",
-              }}
-            >
-              {file.kind === "drive#folder" ? (
-                <FolderOutlined style={{ scale: "2" }} />
-              ) : file.kind === "drive#file" ? (
-                <FileOutlined style={{ scale: "2", cursor: "pointer" }} />
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+          }}
+        >
+          {driveData.map((file, index) => (
+            <>
+              <div
+                key={file.id}
+                style={{
+                  width: "20%",
+                  marginLeft: "5%",
+                  height: "100%",
+                  flex: "1",
+                }}
+              >
+                {/* <Button style={{all: "unset"}}> */}
+                {/* <Button onClick={() => handleFileSelect(file.id)} color={file.id == selectedFile ? "primary" : "default"} style={{border: "none", scale: "2", cursor: "pointer", boxShadow: "none"}}> */}
+                <Button
+                  onClick={() => handleFileSelect(file.id)}
+                  style={
+                    file.id == selectedFile
+                      ? {
+                          // border: "none",
+                          scale: "1.5",
+                          cursor: "pointer",
+                          boxShadow: "none",
+                          backgroundColor: "#4e6fcb",
+                          color: "white",
+                        }
+                      : {
+                          // border: "none",
+                          scale: "1.5",
+                          cursor: "pointer",
+                          boxShadow: "none",
+                          backgroundColor: "#f4f4f4"
+                        }
+                  }
+                >
+                  {file.kind == "drive#folder" ? (
+                    <FolderOutlined />
+                  ) : file.kind == "drive#file" ? (
+                    <FileOutlined />
+                  ) : (
+                    <QuestionOutlined style={{ scale: "2" }} />
+                  )}
+                  <br />
+                  {file.name}
+                </Button>
+              </div>
+              {(index + 1) % 3 === 0 ? (
+                <div
+                  style={{ flexBasis: "100%", height: "0", marginTop: "5%" }}
+                />
               ) : (
-                <QuestionOutlined style={{ scale: "2" }} />
+                <></>
               )}
-              <br />
-              {file.name}
-            </div>
+            </>
           ))}
         </div>
       </div>
