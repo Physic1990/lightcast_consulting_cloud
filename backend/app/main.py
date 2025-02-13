@@ -114,3 +114,7 @@ def run_local_model():
     except requests.exceptions.RequestException as e:
         # Handle any errors that occur
         raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")
+
+@app.get("/drive_structure")
+async def drive_structure(folder_id: str = 'root'):
+    return drive.return_drive_structure(folder_id)

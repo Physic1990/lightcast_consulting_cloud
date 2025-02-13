@@ -6,42 +6,51 @@ import Icon, {
   StarFilled,
   ToolFilled,
 } from "@ant-design/icons";
-import { Button, Dropdown, MenuProps } from "antd";
+import { Button, Breadcrumb, Dropdown, MenuProps } from "antd";
 import { useEffect, useState } from "react";
 
 export default function DriveData() {
   const [driveData, setDriveData] = useState([]);
+  const [selectPath, setSelectPath] = useState([]);
+  var topLevelData;
 
   //Set selected file based on ID
   const [selectedFile, setSelectedFile] = useState("");
   // Function to get Drive data
   const getDriveData = async () => {
-    await fetch("http://localhost:8000/drive_data?include_trashed=True")
+    await fetch("http://localhost:8000/drive_structure")
       .then((response) => response.json())
       .then((response) => {
-        setDriveData(response);
-        // console.log(response);
+        var newData = [];
+        var prevIndent : number = 0;
+        var folderLoc = [];
+
+        for(var i = 0; i < response.length; i++) {
+          response[i].contents = [];
+
+          if(response[i].indent == 0) {
+            newData.push(response[i]);
+          } else {
+            if(response[i].indent == prevIndent) {
+              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);            
+            } else if(response[i].indent > prevIndent) {
+              folderLoc.push(i - 1);
+              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);
+            } else {
+              folderLoc.pop();
+              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);
+            }
+          }
+          prevIndent = response[i].indent;
+        }
+        setDriveData(newData);
+        topLevelData = newData;
       })
       .catch(() => console.error("Failed to get Drive data."));
   };
 
   // Function to run the model
   const runModel = async () => {
-    // try {
-    //   const response = await fetch("http://localhost:8000/run-local-model", {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //   });
-    //   const data = await response.json();
-    //   console.log(data);
-    //   alert(`Processed Text: ${data.processed_text}`);
-    // } catch (error) {
-    //   console.error("Error:", error);
-    //   alert("Failed to run the model.");
-    // }
-
     await fetch("http://localhost:8000/run-local-model", {
       method: "POST",
     })
@@ -88,11 +97,25 @@ export default function DriveData() {
     getDriveData();
   }, []);
 
-  const handleFileSelect = (id: string) => {
+  const handleFileSelect = (file) => {
     console.log(selectedFile);
-    console.log(id);
-    setSelectedFile(id);
+    if(file.type == 'folder') {
+      setDriveData(file.contents);
+      setSelectPath([...selectPath, file])
+    } else {
+      console.log(file.id);
+      setSelectedFile(file.id);
+    }
   };
+
+  const exitFolder = () => {
+    if(selectPath.length > 1) {
+      setDriveData(selectPath[selectPath.length - 2].contents);
+    } else {
+      getDriveData();
+    }
+    selectPath.pop();
+  }
 
   return (
     <div>
@@ -153,6 +176,32 @@ export default function DriveData() {
             flexWrap: "wrap",
           }}
         >
+          { selectPath.length > 0 ? 
+            <>
+            <div
+              key={'back'}
+              style={{
+                width: "20%",
+                marginLeft: "5%",
+                height: "100%",
+                flex: "1",
+              }}
+            >
+              <Button 
+                onClick={() => exitFolder()} 
+                style={{
+                  scale: "1.5", 
+                  cursor: "pointer", 
+                  boxShadow: "none", 
+                  backgroundColor: "#C62828", 
+                  color: "white"
+                }}>
+                  Back
+                </Button>
+              </ div>
+              <br />
+              </>
+          : <></>}
           {driveData.map((file, index) => (
             <>
               <div
@@ -164,10 +213,8 @@ export default function DriveData() {
                   flex: "1",
                 }}
               >
-                {/* <Button style={{all: "unset"}}> */}
-                {/* <Button onClick={() => handleFileSelect(file.id)} color={file.id == selectedFile ? "primary" : "default"} style={{border: "none", scale: "2", cursor: "pointer", boxShadow: "none"}}> */}
                 <Button
-                  onClick={() => handleFileSelect(file.id)}
+                  onClick={() => handleFileSelect(file)}
                   style={
                     file.id == selectedFile
                       ? {
@@ -187,12 +234,12 @@ export default function DriveData() {
                         }
                   }
                 >
-                  {file.kind == "drive#folder" ? (
+                  {file.type == "folder" ? (
                     <FolderOutlined />
-                  ) : file.kind == "drive#file" ? (
+                  ) : file.type == "file" ? (
                     <FileOutlined />
                   ) : (
-                    <QuestionOutlined style={{ scale: "2" }} />
+                    <QuestionOutlined />
                   )}
                   <br />
                   {file.name}
