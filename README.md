@@ -32,7 +32,7 @@ Start the frontend inside frontend folder: yarn dev (or npm run dev)
 ```bash
 cd frontend
 yarn install  # OR npm install
-yarn run dev --host
+yarn run dev --host  # OR npm run dev
 ```
 
 The frontend will be available at http://localhost:3000.

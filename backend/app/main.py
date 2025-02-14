@@ -107,3 +107,18 @@ async def run_local_model(data: dict):
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+        # Forward the request to the local helper app
+        # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
+        response = requests.post("http://localhost:9000/run-model")
+        print("Signal sent!")
+        response.raise_for_status()  # Raise an error if the request fails
+        returned_response = response.json()
+        print(returned_response)
+        return returned_response  # Return the response from the local helper
+    except requests.exceptions.RequestException as e:
+        # Handle any errors that occur
+        raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")
+
+@app.get("/drive_structure")
+async def drive_structure(folder_id: str = 'root'):
+    return drive.return_drive_structure(folder_id)

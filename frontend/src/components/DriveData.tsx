@@ -11,6 +11,10 @@ import { useEffect, useState } from "react";
 
 export default function DriveData() {
   const [driveData, setDriveData] = useState([]);
+  const [selectPath, setSelectPath] = useState([]);
+  var topLevelData;
+
+  //Set selected file based on ID
   const [selectedFile, setSelectedFile] = useState("");
   const [selectedFileName, setSelectedFileName] = useState(""); // Store file name
   const [status, setStatus] = useState(""); // Model execution status
@@ -20,12 +24,33 @@ export default function DriveData() {
 
   // Function to get Drive data
   const getDriveData = async () => {
-    console.log("Fetching drive data...");
-    await fetch("http://localhost:8000/drive_data?include_trashed=True")
+    await fetch("http://localhost:8000/drive_structure")
       .then((response) => response.json())
       .then((response) => {
-        setDriveData(response);
-        console.log("Drive data loaded:", response);
+        var newData = [];
+        var prevIndent : number = 0;
+        var folderLoc = [];
+
+        for(var i = 0; i < response.length; i++) {
+          response[i].contents = [];
+
+          if(response[i].indent == 0) {
+            newData.push(response[i]);
+          } else {
+            if(response[i].indent == prevIndent) {
+              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);            
+            } else if(response[i].indent > prevIndent) {
+              folderLoc.push(i - 1);
+              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);
+            } else {
+              folderLoc.pop();
+              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);
+            }
+          }
+          prevIndent = response[i].indent;
+        }
+        setDriveData(newData);
+        topLevelData = newData;
       })
       .catch((error) => console.error("Failed to get Drive data.", error));
   };
@@ -122,11 +147,26 @@ export default function DriveData() {
     getDriveData();
   }, []);
 
-  const handleFileSelect = (id: string, name: string) => {
-    console.log(`File selected: ID=${id}, Name=${name}`);
-    setSelectedFile(id);
-    setSelectedFileName(name);
+
+  const handleFileSelect = (file) => {
+    console.log(selectedFile);
+    if(file.type == 'folder') {
+      setDriveData(file.contents);
+      setSelectPath([...selectPath, file])
+    } else {
+      console.log(file.id);
+      setSelectedFile(file.id);
+    }
   };
+
+  const exitFolder = () => {
+    if(selectPath.length > 1) {
+      setDriveData(selectPath[selectPath.length - 2].contents);
+    } else {
+      getDriveData();
+    }
+    selectPath.pop();
+  }
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
@@ -192,6 +232,32 @@ export default function DriveData() {
             flexWrap: "wrap",
           }}
         >
+          { selectPath.length > 0 ? 
+            <>
+            <div
+              key={'back'}
+              style={{
+                width: "20%",
+                marginLeft: "5%",
+                height: "100%",
+                flex: "1",
+              }}
+            >
+              <Button 
+                onClick={() => exitFolder()} 
+                style={{
+                  scale: "1.5", 
+                  cursor: "pointer", 
+                  boxShadow: "none", 
+                  backgroundColor: "#C62828", 
+                  color: "white"
+                }}>
+                  Back
+                </Button>
+              </ div>
+              <br />
+              </>
+          : <></>}
           {driveData.map((file, index) => (
             <>
               <div
@@ -204,7 +270,7 @@ export default function DriveData() {
                 }}
               >
                 <Button
-                  onClick={() => handleFileSelect(file.id, file.name)}
+                  onClick={() => handleFileSelect(file)}
                   style={
                     file.id === selectedFile
                       ? {
@@ -222,12 +288,12 @@ export default function DriveData() {
                         }
                   }
                 >
-                  {file.kind === "drive#folder" ? (
+                  {file.type == "folder" ? (
                     <FolderOutlined />
-                  ) : file.kind === "drive#file" ? (
+                  ) : file.type == "file" ? (
                     <FileOutlined />
                   ) : (
-                    <QuestionOutlined style={{ scale: "2" }} />
+                    <QuestionOutlined />
                   )}
                   <br />
                   {file.name}

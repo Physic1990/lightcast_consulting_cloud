@@ -24,6 +24,7 @@ def return_all_drive_data(include_trashed=True):
 
     query = None if include_trashed else "trashed = false"
     results = service.files().list(q=query).execute()
+
     items = results.get("files", [])
 
     if not items:
@@ -117,3 +118,28 @@ def process_file(file_path):
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         return None
+        
+def return_drive_structure(folder_id = 'root', indent = 0):
+    creds = credential_handler.get_creds()
+    service = build("drive", "v3", credentials = creds)
+    
+    query = f"'{folder_id}' in parents"
+    results = service.files().list(
+        q = query,
+        spaces = 'drive',
+        fields = "files(id, name, mimeType)",
+    ).execute()
+    
+    items = results.get('files', [])
+    structure = []
+    for item in items:
+        item_info = {
+            "name": item['name'],
+            "id": item['id'],
+            "type": "folder" if item['mimeType'] == 'application/vnd.google-apps.folder' else "file",
+            "indent": indent
+        }
+        structure.append(item_info)
+        if item['mimeType'] == 'application/vnd.google-apps.folder':
+            structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1))
+    return structure
