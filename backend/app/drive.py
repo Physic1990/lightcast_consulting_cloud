@@ -1,71 +1,123 @@
 import io
+import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from . import credential_handler
+import pandas as pd
 
-def return_all_drive_data(include_trashed = True):
+# Define storage directories
+DOWNLOAD_FOLDER = "downloading"  # Files downloaded from Google Drive
+PROCESSED_FOLDER = "got_from_local_helper_processed"  # Processed files received from Local Helper
+
+# Ensure directories exist
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+
+def return_all_drive_data(include_trashed=True):
+    """
+    Fetches all files from Google Drive.
+    :param include_trashed: Boolean flag to include/exclude trashed files.
+    :return: List of file metadata from Google Drive.
+    """
     creds = credential_handler.get_creds()
-    service = build("drive", "v3", credentials = creds)
+    service = build("drive", "v3", credentials=creds)
 
-    # Use query of specific files in google drive if you only want to see certain files
-    if include_trashed: # no query needed, this will include trashed files by default
-        query = None
-    else: # exclude trashed files
-        query = "trashed = false"
+    query = None if include_trashed else "trashed = false"
+    results = service.files().list(q=query).execute()
 
-    if query: # results exclude trash - this is not the default
-        results = service.files().list(q = query).execute()
-    else: # results include trash - this is the default
-        results = service.files().list().execute()
     items = results.get("files", [])
 
     if not items:
-        print("No files found")
+        print("No files found in Google Drive.")
         return []
+
     for i in items:
-        print(u"{0} ({1})".format(i["name"], i["id"]))
+        print(f"File found: {i['name']} ({i['id']})")
 
     return items
 
 def search_file(file_name):
     creds = credential_handler.get_creds()
-    service = build("drive", "v3", credentials = creds)
+    service = build("drive", "v3", credentials=creds)
     query = f"name = '{file_name}'"
-    results = service.files().list(q = query).execute() # with query of specific files in google drive if you only want to see certain files
+    results = service.files().list(q=query).execute()
     items = results.get("files", [])
 
     if not items:
-        print("No files found")
+        print(f"No files found matching: {file_name}")
         return []
+    
     for i in items:
-        print(u"{0} ({1})".format(i["name"], i["id"]))
+        print(f"Found file: {i['name']} ({i['id']})")
 
     return items
 
-def download_file(file_id, file_name = None):
-    if file_id:
-        creds = credential_handler.get_creds()
-        service = build("drive", "v3", credentials = creds)
-        request = service.files().get_media(fileId = file_id)
-        file = io.BytesIO()
-        downloader = MediaIoBaseDownload(file, request)
-        done = False
-        while not done:
-            status, done = downloader.next_chunk()
-            print(f"Download {int(status.progress() * 100)}")
-        return file.getvalue()
-    elif file_name:
-        files = search_file(file_name)
-        if len(files) == 0:
-            print(f"Could not find file {file_name}")
-            return
-        elif len(files) > 1:
-            print(f"File name {file_name} is not unique")
-            return 
-        file_id = files[0]["id"]
-        return download_file(file_id)
-    else:
-        print("No file_id or file_name provided")
+def download_file(file_id, file_name=None):
+    """
+    Downloads a file from Google Drive using its file ID.
+    :param file_id: The Google Drive file ID.
+    :param file_name: (Optional) Custom filename to save the file.
+    :return: Local file path of the downloaded file.
+    """
+    creds = credential_handler.get_creds()
+    service = build("drive", "v3", credentials=creds)
+
+    request = service.files().get_media(fileId=file_id)
+    file_data = io.BytesIO()
+    downloader = MediaIoBaseDownload(file_data, request)
+
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+        print(f"Download progress: {int(status.progress() * 100)}%")
+
+    if file_name is None:
+        file_info = service.files().get(fileId=file_id).execute()
+        file_name = file_info.get("name", "downloaded_file")
+
+    local_path = os.path.join(DOWNLOAD_FOLDER, file_name)
+    with open(local_path, "wb") as f:
+        f.write(file_data.getvalue())
+
+    print(f"File downloaded successfully: {local_path}")
+    return local_path
+
+def process_file(file_path):
+    """
+    Processes the given file based on its format.
+    If it's an Excel file (.xlsx, .xls), it adds a new column and saves it.
+    :param file_path: Path to the downloaded file.
+    :return: Processed file path.
+    """
+    try:
+        _, file_extension = os.path.splitext(file_path)
+        file_extension = file_extension.lower()
+
+        processed_file_path = os.path.join(PROCESSED_FOLDER, f"processed_{os.path.basename(file_path)}")
+
+        if file_extension in [".xlsx", ".xls"]:
+            print(f"⚙️ Processing Excel file: {file_path}")
+
+            df = pd.read_excel(file_path)
+
+            # Add a new column (Example: Adding a column "Sum" that sums first two columns)
+            if len(df.columns) >= 2:
+                df["Sum"] = df.iloc[:, 0] + df.iloc[:, 1]
+            else:
+                df["Sum"] = 0  # If there aren't enough columns, default value
+
+            df.to_excel(processed_file_path, index=False)
+            print(f"Processed Excel file saved: {processed_file_path}")
+
+        else:
+            print(f"Unsupported file type: {file_extension}")
+            return None
+
+        return processed_file_path
+
+    except Exception as e:
+        print(f"Error processing file: {str(e)}")
+        return None
         
 def return_drive_structure(folder_id = 'root', indent = 0):
     creds = credential_handler.get_creds()

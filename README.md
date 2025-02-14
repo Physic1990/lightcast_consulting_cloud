@@ -21,11 +21,11 @@ cd lightcast_consulting_cloud
 
 ### How to run the program
 
-Start the Local Helper first: python3 local_helper.py
+Start the Local Helper inside local_helper folder: python3 local_helper.py
 
-Run the backend: uvicorn app.main:app --reload
+Run the backend inside backend folder with virtual env: uvicorn app.main:app --reload
 
-Start the frontend: yarn dev (or npm run dev)
+Start the frontend inside frontend folder: yarn dev (or npm run dev)
 
 ### Front end setup
 
@@ -57,14 +57,6 @@ The backend will be available at http://localhost:8000.
 ### Local helper setup
 ```bash
 cd local_helper
-python3 -m venv lightcast_env  # Create a virtual environment
-source lightcast_env/bin/activate  # (Mac/Linux)
-lightcast_env\Scripts\activate  # (Windows)
-```
-Install dependencies
-
-```bash
-pip install -r requirements.txt
 python3 local_helper.py
 ```
 This will launch a GUI application and also start a Flask server at http://localhost:9000.

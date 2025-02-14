@@ -1,10 +1,10 @@
-# app/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Union
+import requests
+import os
 from . import credential_handler
 from . import drive
-import requests
 
 app = FastAPI()
 
@@ -13,7 +13,6 @@ origins = [
     "https://localhost:3000",
     "localhost:3000"
 ]
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,57 +27,31 @@ def read_root():
     return {"message": "Hello, Team! Welcome to Lightcast Consulting Cloud API"}
 
 team_members = [
-    {
-        "id": "1",
-        "item": "Ian King"
-    },
-    {
-        "id": "2",
-        "item": "Shashwot Niraula"
-    },
-    {
-        "id": "3",
-        "item": "Andrew Plum"
-    },
-    {
-        "id": "4",
-        "item": "Bibek Sharma"
-    },
-    {
-        "id": "5",
-        "item": "Caleb Mouat"
-    }
+    {"id": "1", "item": "Ian King"},
+    {"id": "2", "item": "Shashwot Niraula"},
+    {"id": "3", "item": "Andrew Plum"},
+    {"id": "4", "item": "Bibek Sharma"},
+    {"id": "5", "item": "Caleb Mouat"}
 ]
 
-#Help with members example from https://testdriven.io/blog/fastapi-react/
-#GET route for the members page
 @app.get("/members", tags=["members"])
 async def get_members() -> dict:
     return { "data": team_members }
 
-#POST route for the members page
 @app.post("/members", tags=["members"])
 async def add_member(member: dict) -> dict:
     team_members.append(member)
-    return {
-        "data": { "Member added." }
-    }
+    return {"data": { "Member added." }}
 
-#DELETE route for the members page - BROKEN WITH CODE 422
 @app.delete("/members/{id}", tags=["members"])
 async def delete_member(memberID: int) -> dict:
     for member in team_members:
         if int(member["id"]) == memberID:
             team_members.remove(member)
-            return {
-                "data": f"Member with id {memberID} has been removed."
-            }
-    return {
-        "data": f"Member with id {memberID} not found"
-    }
+            return {"data": f"Member with id {memberID} has been removed."}
+    return {"data": f"Member with id {memberID} not found"}
 
-# Google Drive Server Access Implementation Beginning
-
+# Google Drive Server Access Implementation
 credential_handler.get_creds()
 
 @app.get("/drive_data")
@@ -89,20 +62,51 @@ async def drive_data(include_trashed: bool = True):
 async def search(file_name: str):
     return drive.search_file(file_name)
 
-# NEED TO STILL HANDLE CASE WHERE MULTIPLE FILES ARE NAMED THE SAME
 @app.get("/download")
 async def download(file_id: Union[str, None] = None, file_name: Union[str, None] = None):
     return drive.download_file(file_id, file_name)
 
-# Google Drive Server Access Implementation End
 import logging
-
-# logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.DEBUG)
 
+LOCAL_HELPER_URL = "http://127.0.0.1:9000/upload-file"
+
+PROCESSED_FOLDER = "got_from_local_helper_processed"
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
+
 @app.post("/run-local-model")
-def run_local_model():
+async def run_local_model(data: dict):
+    file_id = data.get("file_id")
+    if not file_id:
+        raise HTTPException(status_code=400, detail="File ID is required.")
+
     try:
+        file_path = drive.download_file(file_id)
+        if not file_path or not os.path.exists(file_path):
+            raise HTTPException(status_code=500, detail="Failed to download file.")
+
+        print(f"File downloaded successfully: {file_path}")
+
+        with open(file_path, "rb") as file:
+            files = {"file": file}
+            response = requests.post(LOCAL_HELPER_URL, files=files)
+        
+        response.raise_for_status()
+        processed_data = response.json()
+
+        processed_filename = os.path.basename(file_path)
+        processed_file_path = os.path.join(PROCESSED_FOLDER, processed_filename)
+
+        with open(processed_file_path, "w") as processed_file:
+            processed_file.write(processed_data.get("processed_text", ""))
+
+        print(f"Processed file saved: {processed_file_path}")
+
+        return {"processed_file": processed_file_path}
+
+    except Exception as e:
+        print(f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
         # Forward the request to the local helper app
         # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
         response = requests.post("http://localhost:9000/run-model")

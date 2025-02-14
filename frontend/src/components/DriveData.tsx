@@ -6,7 +6,7 @@ import Icon, {
   StarFilled,
   ToolFilled,
 } from "@ant-design/icons";
-import { Button, Breadcrumb, Dropdown, MenuProps } from "antd";
+import { Button, Dropdown, MenuProps, Spin, Alert } from "antd";
 import { useEffect, useState } from "react";
 
 export default function DriveData() {
@@ -16,6 +16,12 @@ export default function DriveData() {
 
   //Set selected file based on ID
   const [selectedFile, setSelectedFile] = useState("");
+  const [selectedFileName, setSelectedFileName] = useState(""); // Store file name
+  const [status, setStatus] = useState(""); // Model execution status
+  const [statusType, setStatusType] = useState<"success" | "error" | "info">("info"); // Status Type
+  const [processingTime, setProcessingTime] = useState(0); // Track processing time
+  const [loading, setLoading] = useState(false); // Loading state
+
   // Function to get Drive data
   const getDriveData = async () => {
     await fetch("http://localhost:8000/drive_structure")
@@ -46,20 +52,57 @@ export default function DriveData() {
         setDriveData(newData);
         topLevelData = newData;
       })
-      .catch(() => console.error("Failed to get Drive data."));
+      .catch((error) => console.error("Failed to get Drive data.", error));
   };
 
   // Function to run the model
   const runModel = async () => {
-    await fetch("http://localhost:8000/run-local-model", {
-      method: "POST",
-    })
-      .then((response) => response.json())
-      .then((response) => console.log(response))
-      .catch((error) => {
-        console.error("Error:", error);
-        alert("Failed to run the model.");
+    if (!selectedFile) {
+      alert("Please select a file first!");
+      setStatus("No file selected. Please choose a valid file.");
+      setStatusType("error");
+      return;
+    }
+
+    // Check if the selected file is an Excel file (.xlsx)
+    if (!selectedFileName.endsWith(".xlsx")) {
+      setStatus("Only .xlsx files can be processed.");
+      setStatusType("error");
+      return;
+    }
+
+    console.log(`Sending file to backend: ${selectedFile}`);
+    setLoading(true);
+    setStatus("Running model...");
+    setStatusType("info");
+    setProcessingTime(0);
+    const startTime = Date.now(); // Track start time
+
+    try {
+      const response = await fetch("http://localhost:8000/run-local-model", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: selectedFile }),
       });
+
+      const data = await response.json();
+      const elapsedTime = (Date.now() - startTime) / 1000; // Calculate time in seconds
+      setProcessingTime(elapsedTime);
+      setLoading(false);
+
+      if (data.processed_file) {
+        setStatus(`Model completed in ${elapsedTime.toFixed(2)} sec`);
+        setStatusType("success");
+      } else {
+        setStatus("Model failed to run.");
+        setStatusType("error");
+      }
+    } catch (error) {
+      console.error("Error running model:", error);
+      setStatus("Model failed to run.");
+      setStatusType("error");
+      setLoading(false);
+    }
   };
 
   // Menu items with handlers
@@ -67,7 +110,13 @@ export default function DriveData() {
     {
       key: "1",
       label: (
-        <p onClick={runModel} style={{ cursor: "pointer" }}>
+        <p
+          onClick={() => {
+            console.log("Run Model clicked");
+            runModel();
+          }}
+          style={{ cursor: "pointer" }}
+        >
           <ToolFilled style={{ marginRight: "10px" }} />
           Run the Model
         </p>
@@ -76,7 +125,7 @@ export default function DriveData() {
     {
       key: "2",
       label: (
-        <p>
+        <p onClick={() => console.log("Run Draft Operation clicked")}>
           <EditFilled style={{ marginRight: "10px" }} />
           Run Draft Operation
         </p>
@@ -85,7 +134,7 @@ export default function DriveData() {
     {
       key: "3",
       label: (
-        <p>
+        <p onClick={() => console.log("Run Deliverable Preparation clicked")}>
           <StarFilled style={{ marginRight: "10px" }} />
           Run Deliverable Preparation
         </p>
@@ -94,8 +143,10 @@ export default function DriveData() {
   ];
 
   useEffect(() => {
+    console.log("Component mounted. Fetching drive data...");
     getDriveData();
   }, []);
+
 
   const handleFileSelect = (file) => {
     console.log(selectedFile);
@@ -118,10 +169,10 @@ export default function DriveData() {
   }
 
   return (
-    <div>
-      <h2 style={{ textAlign: "center", scale: "1.3" }}>
-        Select a State and School
-      </h2>
+    <div style={{ padding: "20px", textAlign: "center" }}>
+      <h2>Run Model on Selected File</h2>
+
+      {/* Drive Data Section */}
       <div
         style={{
           display: "inline-block",
@@ -135,6 +186,7 @@ export default function DriveData() {
               className="lc_bt"
               size="large"
               style={{ marginBottom: "10px", marginLeft: "-50px" }}
+              onClick={() => console.log("Model Type 1 clicked")}
             >
               Model Type 1
             </Button>
@@ -145,6 +197,7 @@ export default function DriveData() {
               className="lc_bt"
               size="large"
               style={{ marginBottom: "10px", marginLeft: "-50px" }}
+              onClick={() => console.log("Model Type 2 clicked")}
             >
               Model Type 2
             </Button>
@@ -155,12 +208,15 @@ export default function DriveData() {
               className="lc_bt"
               size="large"
               style={{ marginLeft: "-50px" }}
+              onClick={() => console.log("Model Type 3 clicked")}
             >
               Model Type 3
             </Button>
           </Dropdown>
         </ul>
       </div>
+
+      {/* File List Display */}
       <div
         style={{
           display: "inline-block",
@@ -216,9 +272,8 @@ export default function DriveData() {
                 <Button
                   onClick={() => handleFileSelect(file)}
                   style={
-                    file.id == selectedFile
+                    file.id === selectedFile
                       ? {
-                          // border: "none",
                           scale: "1.5",
                           cursor: "pointer",
                           boxShadow: "none",
@@ -226,11 +281,10 @@ export default function DriveData() {
                           color: "white",
                         }
                       : {
-                          // border: "none",
                           scale: "1.5",
                           cursor: "pointer",
                           boxShadow: "none",
-                          backgroundColor: "#f4f4f4"
+                          backgroundColor: "#f4f4f4",
                         }
                   }
                 >
@@ -256,6 +310,25 @@ export default function DriveData() {
           ))}
         </div>
       </div>
+
+      {/* Loading Spinner */}
+      {loading && (
+        <div style={{ marginTop: "15px" }}>
+          <Spin size="large" />
+        </div>
+      )}
+
+      {/* Model Execution Status with Error Highlighting */}
+      {status && (
+        <div style={{ marginTop: "15px" }}>
+          <Alert
+            message={status}
+            type={statusType}
+            showIcon
+            style={statusType === "error" ? { backgroundColor: "#f8d7da" } : {}}
+          />
+        </div>
+      )}
     </div>
   );
 }
