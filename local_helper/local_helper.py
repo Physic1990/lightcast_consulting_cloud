@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "received_from_backend"
-PROCESSED_FOLDER = "processed_files"
+PROCESSED_FOLDER = "/Users/shashwotniraula/Desktop/Lightcast/main/backend/got_from_local_helper_processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 

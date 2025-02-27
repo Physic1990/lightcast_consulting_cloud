@@ -71,7 +71,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 LOCAL_HELPER_URL = "http://127.0.0.1:9000/upload-file"
 
-PROCESSED_FOLDER = "got_from_local_helper_processed"
+PROCESSED_FOLDER = "backend/got_from_local_helper_processed"
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
 
 @app.post("/run-local-model")
