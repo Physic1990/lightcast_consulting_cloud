@@ -8,8 +8,8 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = "received_from_backend"
-PROCESSED_FOLDER = "processed_files"
+UPLOAD_FOLDER = "local_helper/received_from_backend"
+PROCESSED_FOLDER = "local_helper/processed_files"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 

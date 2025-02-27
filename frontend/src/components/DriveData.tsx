@@ -66,6 +66,7 @@ export default function DriveData() {
 
     // Check if the selected file is an Excel file (.xlsx)
     if (!selectedFileName.endsWith(".xlsx")) {
+      console.log(selectedFileName)
       setStatus("Only .xlsx files can be processed.");
       setStatusType("error");
       return;
@@ -156,6 +157,7 @@ export default function DriveData() {
     } else {
       console.log(file.id);
       setSelectedFile(file.id);
+      setSelectedFileName(file.name);
     }
   };
 
