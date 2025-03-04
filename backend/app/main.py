@@ -136,3 +136,20 @@ async def run_local_model(data: dict):
 @app.get("/drive_structure")
 async def drive_structure(folder_id: str = 'root'):
     return drive.return_drive_structure(folder_id)
+
+@app.post("/file_upload")
+async def file_upload(data: dict):
+    print(data)
+    file_name = data.get("file_name")
+    mimetype = data.get("mimetype")
+    upload_filename = data.get("upload_filename")
+    resumable = data.get("resumable")
+    chunksize = data.get("chunksize")
+    if not (file_name and mimetype and upload_filename):
+        raise HTTPException(status_code=400, detail="File name, mimetype, and upload name are required.")
+    if chunksize is None:
+        chunksize=262144
+    if resumable is None:
+        return drive.save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=chunksize)
+
+    return drive.save_file(file_name, mimetype, upload_filename, resumable, chunksize)

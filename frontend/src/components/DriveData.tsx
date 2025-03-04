@@ -189,8 +189,23 @@ export default function DriveData() {
     setActiveData(null);
   };
 
-  const handleDataSaveDrive = () => {
+  const handleDataSaveDrive = async () => {
     console.log(activeData?.hash + " saved to Drive");
+    try {
+      const response = await fetch("http://localhost:8000/file_upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_name: activeData?.processed_file,
+          mimetype: "application/json",
+          upload_filename: activeData?.processed_file,
+          resumable: true,
+          chunksize: 262144,
+        }),
+      });
+    } catch (error) {
+      console.error("Error saving file:", error);
+    }
   };
 
   const handleDataSaveLocal = () => {
@@ -374,7 +389,17 @@ export default function DriveData() {
         <h2>Processed Data</h2>
         <p>Path: {activeData?.processed_file}</p>
         <p>Hash: {activeData?.hash}</p>
-        <Button key="saveToDrive" type="primary" onClick={handleDataSaveDrive}>
+        <script
+          src="https://apis.google.com/js/platform.js"
+          async
+          defer
+        ></script>
+        <Button
+          className="g-savetodrive"
+          key="saveToDrive"
+          type="primary"
+          onClick={handleDataSaveDrive}
+        >
           Save to Drive
         </Button>
         <Button key="saveLocal" type="primary" onClick={handleDataSaveLocal}>

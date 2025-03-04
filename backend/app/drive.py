@@ -2,6 +2,8 @@ import io
 import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaFileUpload
+from os import stat
 from . import credential_handler
 import pandas as pd
 
@@ -143,3 +145,15 @@ def return_drive_structure(folder_id = 'root', indent = 0):
         if item['mimeType'] == 'application/vnd.google-apps.folder':
             structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1))
     return structure
+
+def save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=262144):
+    creds = credential_handler.get_creds()
+    service = build("drive", "v3", credentials=creds)
+
+    file_metadata = {
+        'name': file_name,
+        'mimeType': mimetype,
+    }
+
+    media_content = MediaFileUpload(file_name, mimetype=mimetype)
+    file = service.files().create(body=file_metadata,media_body=media_content).execute()
