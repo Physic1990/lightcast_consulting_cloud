@@ -6,45 +6,60 @@ import Icon, {
   StarFilled,
   ToolFilled,
 } from "@ant-design/icons";
-import { Button, Dropdown, MenuProps, Spin, Alert } from "antd";
+import { Button, Dropdown, MenuProps, Spin, Alert, Modal } from "antd";
 import { useEffect, useState } from "react";
+
+//Create format for processed data object
+interface ProcessedData {
+  processed_file: string; //Store path to processed file on backend
+  hash: string; //Store hash of original file for unique identification
+}
 
 export default function DriveData() {
   const [driveData, setDriveData] = useState([]);
   const [selectPath, setSelectPath] = useState([]);
-  var topLevelData;
+  let topLevelData;
 
   //Set selected file based on ID
   const [selectedFile, setSelectedFile] = useState("");
   const [selectedFileName, setSelectedFileName] = useState(""); // Store file name
   const [status, setStatus] = useState(""); // Model execution status
-  const [statusType, setStatusType] = useState<"success" | "error" | "info">("info"); // Status Type
+  const [statusType, setStatusType] = useState<"success" | "error" | "info">(
+    "info"
+  ); // Status Type
   const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
+  const [activeData, setActiveData] = useState<ProcessedData | null>(null);
 
   // Function to get Drive data
   const getDriveData = async () => {
     await fetch("http://localhost:8000/drive_structure")
       .then((response) => response.json())
       .then((response) => {
-        var newData = [];
-        var prevIndent : number = 0;
-        var folderLoc = [];
+        const newData = [];
+        let prevIndent: number = 0;
+        const folderLoc = [];
 
-        for(var i = 0; i < response.length; i++) {
+        for (let i = 0; i < response.length; i++) {
           response[i].contents = [];
 
-          if(response[i].indent == 0) {
+          if (response[i].indent == 0) {
             newData.push(response[i]);
           } else {
-            if(response[i].indent == prevIndent) {
-              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);            
-            } else if(response[i].indent > prevIndent) {
+            if (response[i].indent == prevIndent) {
+              response[folderLoc[folderLoc.length - 1]].contents.push(
+                response[i]
+              );
+            } else if (response[i].indent > prevIndent) {
               folderLoc.push(i - 1);
-              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);
+              response[folderLoc[folderLoc.length - 1]].contents.push(
+                response[i]
+              );
             } else {
               folderLoc.pop();
-              response[folderLoc[folderLoc.length - 1]].contents.push(response[i]);
+              response[folderLoc[folderLoc.length - 1]].contents.push(
+                response[i]
+              );
             }
           }
           prevIndent = response[i].indent;
@@ -93,6 +108,8 @@ export default function DriveData() {
       if (data.processed_file) {
         setStatus(`Model completed in ${elapsedTime.toFixed(2)} sec`);
         setStatusType("success");
+        console.log(data);
+        setActiveData(data);
       } else {
         setStatus("Model failed to run.");
         setStatusType("error");
@@ -147,26 +164,38 @@ export default function DriveData() {
     getDriveData();
   }, []);
 
-
   const handleFileSelect = (file) => {
     console.log(selectedFile);
-    if(file.type == 'folder') {
+    if (file.type == "folder") {
       setDriveData(file.contents);
-      setSelectPath([...selectPath, file])
+      setSelectPath([...selectPath, file]);
     } else {
       console.log(file.id);
       setSelectedFile(file.id);
+      setSelectedFileName(file.name);
     }
   };
 
   const exitFolder = () => {
-    if(selectPath.length > 1) {
+    if (selectPath.length > 1) {
       setDriveData(selectPath[selectPath.length - 2].contents);
     } else {
       getDriveData();
     }
     selectPath.pop();
-  }
+  };
+
+  const handleDataClose = () => {
+    setActiveData(null);
+  };
+
+  const handleDataSaveDrive = () => {
+    console.log(activeData?.hash + " saved to Drive");
+  };
+
+  const handleDataSaveLocal = () => {
+    console.log(activeData?.hash + " saved locally");
+  };
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
@@ -232,32 +261,35 @@ export default function DriveData() {
             flexWrap: "wrap",
           }}
         >
-          { selectPath.length > 0 ? 
+          {selectPath.length > 0 ? (
             <>
-            <div
-              key={'back'}
-              style={{
-                width: "20%",
-                marginLeft: "5%",
-                height: "100%",
-                flex: "1",
-              }}
-            >
-              <Button 
-                onClick={() => exitFolder()} 
+              <div
+                key={"back"}
                 style={{
-                  scale: "1.5", 
-                  cursor: "pointer", 
-                  boxShadow: "none", 
-                  backgroundColor: "#C62828", 
-                  color: "white"
-                }}>
+                  width: "20%",
+                  marginLeft: "5%",
+                  height: "100%",
+                  flex: "1",
+                }}
+              >
+                <Button
+                  onClick={() => exitFolder()}
+                  style={{
+                    scale: "1.5",
+                    cursor: "pointer",
+                    boxShadow: "none",
+                    backgroundColor: "#C62828",
+                    color: "white",
+                  }}
+                >
                   Back
                 </Button>
-              </ div>
+              </div>
               <br />
-              </>
-          : <></>}
+            </>
+          ) : (
+            <></>
+          )}
           {driveData.map((file, index) => (
             <>
               <div
@@ -329,6 +361,26 @@ export default function DriveData() {
           />
         </div>
       )}
+
+      {/* Modal for data display */}
+      <Modal
+        open={activeData !== null}
+        onOk={handleDataSaveLocal}
+        onCancel={handleDataClose}
+        maskClosable
+        footer={[]}
+      >
+        {/* Show processed data - must update with actual visualization */}
+        <h2>Processed Data</h2>
+        <p>Path: {activeData?.processed_file}</p>
+        <p>Hash: {activeData?.hash}</p>
+        <Button key="saveToDrive" type="primary" onClick={handleDataSaveDrive}>
+          Save to Drive
+        </Button>
+        <Button key="saveLocal" type="primary" onClick={handleDataSaveLocal}>
+          Save Locally
+        </Button>
+      </Modal>
     </div>
   );
 }
