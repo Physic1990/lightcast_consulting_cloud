@@ -54,7 +54,7 @@ async def open_file_explorer():
     try:
         # Check if the path exists
         if not os.path.exists(MODELS_FOLDER):
-            raise HTTPException(status_code = 400, detail = f"Path does not exist: {FILE_EXPLORER_PATH}")
+            raise HTTPException(status_code = 400, detail = f"Path does not exist: {MODELS_FOLDER}")
 
         # Open the file explorer based on the operating system
         if platform.system() == "Windows": # Windows
