@@ -1,8 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Union
-import requests
 import os
+import requests
+import platform
+import subprocess
 from . import credential_handler
 from . import drive
 
@@ -122,3 +124,29 @@ async def run_local_model(data: dict):
 @app.get("/drive_structure")
 async def drive_structure(folder_id: str = 'root'):
     return drive.return_drive_structure(folder_id)
+
+#----------------------------------------------------------
+# Temporary global variable for open_file_explorer function
+MODELS_FOLDER = os.getcwd() # get relative path of current working directory
+#----------------------------------------------------------
+
+@app.get("/open_file_explorer", tags = ["utility"])
+async def open_file_explorer():
+    try:
+        # Check if the path exists
+        if not os.path.exists(MODELS_FOLDER):
+            raise HTTPException(status_code = 400, detail = f"Path does not exist: {MODELS_FOLDER}")
+
+        # Open the file explorer based on the operating system
+        if platform.system() == "Windows": # Windows
+            os.startfile(MODELS_FOLDER)
+        elif platform.system() == "Darwin": # macOS
+            subprocess.run(["open", MODELS_FOLDER])
+        else: # Linux and others
+            subprocess.run(["xdg-open", MODELS_FOLDER])
+
+        return f"File explorer opened at: {MODELS_FOLDER}"
+
+    except Exception as e:
+        raise HTTPException(status_code = 500, detail = f"Failed to open file explorer: {str(e)}")
+    return
