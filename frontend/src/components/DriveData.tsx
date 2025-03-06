@@ -197,7 +197,7 @@ export default function DriveData() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           file_name: activeData?.processed_file,
-          mimetype: "application/json",
+          mimetype: "application/octet-stream",
           upload_filename: activeData?.processed_file,
           resumable: true,
           chunksize: 262144,
@@ -208,8 +208,17 @@ export default function DriveData() {
     }
   };
 
-  const handleDataSaveLocal = () => {
+  const handleDataSaveLocal = async () => {
     console.log(activeData?.hash + " saved locally");
+    await fetch(
+      `http://localhost:8000/file_download?file_path=${activeData?.processed_file}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+      .then((response) => console.log(response))
+      .catch((error) => console.error(error));
   };
 
   return (

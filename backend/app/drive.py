@@ -148,12 +148,31 @@ def return_drive_structure(folder_id = 'root', indent = 0):
 
 def save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=262144):
     creds = credential_handler.get_creds()
-    service = build("drive", "v3", credentials=creds)
+    service = build("drive", "v3", credentials = creds)
+    
+    upload_filename = os.path.basename(file_name)
 
     file_metadata = {
-        'name': file_name,
-        'mimeType': mimetype,
+    'name': upload_filename,
+    'mimeType': mimetype
     }
+    media = MediaFileUpload(file_name, mimetype=mimetype, resumable=True)
+    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    print ('File ID: ' + file.get('id'))
 
-    media_content = MediaFileUpload(file_name, mimetype=mimetype)
-    file = service.files().create(body=file_metadata,media_body=media_content).execute()
+    
+    # file_size = stat(file_name).st_size
+
+    # media = MediaFileUpload(file_name, mimetype=mimetype, resumable=resumable, chunksize=chunksize)
+    # # Add all the writable properties you want the file to have in the body!
+    # body = {"name": upload_filename} 
+    # request = service.files().create(body=body, media_body=media).execute()
+    # if file_size > chunksize:
+    #     response = None
+    #     while response is None:
+    #         chunk = request.next_chunk()
+    #         if chunk:
+    #             status, response = chunk
+    #             if status:
+    #                 print("Uploaded %d%%." % int(status.progress() * 100))
+    # print("Upload Complete!")
