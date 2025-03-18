@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Union
 import requests
 import os
 from . import credential_handler
 from . import drive
+import hashlib
 
 app = FastAPI()
 
@@ -55,7 +57,7 @@ async def delete_member(memberID: int) -> dict:
 credential_handler.get_creds()
 
 @app.get("/drive_data")
-async def drive_data(include_trashed: bool = True):
+async def drive_data(include_trashed: bool = False):
     return drive.return_all_drive_data(include_trashed)
 
 @app.get("/search")
@@ -71,7 +73,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 LOCAL_HELPER_URL = "http://127.0.0.1:9000/upload-file"
 
-PROCESSED_FOLDER = "got_from_local_helper_processed"
+# PROCESSED_FOLDER = "backend/got_from_local_helper_processed"
+PROCESSED_FOLDER = os.path.join("backend", "got_from_local_helper_processed")
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
 
 @app.post("/run-local-model")
@@ -102,19 +105,32 @@ async def run_local_model(data: dict):
 
         print(f"Processed file saved: {processed_file_path}")
 
-        return {"processed_file": processed_file_path}
+        #Generate hash for unique identification of file
+        h = hashlib.sha1()
+
+        #Open file for binary mode reading
+        with open(processed_file_path,'rb') as file:
+
+            #Loop through file
+            chunk = 0
+            while chunk != b'':
+                #Read 1024-byte chunk
+                chunk = file.read(1024)
+                h.update(chunk)
+
+        return {"processed_file": processed_file_path, "hash": h.hexdigest()}
 
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
         # Forward the request to the local helper app
         # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
-        response = requests.post("http://localhost:9000/run-model")
-        print("Signal sent!")
-        response.raise_for_status()  # Raise an error if the request fails
-        returned_response = response.json()
-        print(returned_response)
-        return returned_response  # Return the response from the local helper
+        # response = requests.post("http://localhost:9000/run-model")
+        # print("Signal sent!")
+        # response.raise_for_status()  # Raise an error if the request fails
+        # returned_response = response.json()
+        # print(returned_response)
+        # return returned_response  # Return the response from the local helper
     except requests.exceptions.RequestException as e:
         # Handle any errors that occur
         raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")
@@ -122,3 +138,20 @@ async def run_local_model(data: dict):
 @app.get("/drive_structure")
 async def drive_structure(folder_id: str = 'root'):
     return drive.return_drive_structure(folder_id)
+
+#Upload processed file from application to Drive
+@app.post("/file_upload")
+async def file_upload(data: dict):
+    return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"))
+
+#Save file from application to local device
+@app.get("/file_download")
+async def file_download(file_path: str):
+    #Cut out "backend/" directory
+    loc_file_path = file_path[8:]
+    try:
+        return FileResponse(loc_file_path)
+    except Exception as e:
+        print(f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+        

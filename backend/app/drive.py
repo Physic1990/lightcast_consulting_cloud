@@ -2,8 +2,12 @@ import io
 import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaFileUpload
+from os import stat
 from . import credential_handler
 import pandas as pd
+from fastapi import HTTPException
+
 
 # Define storage directories
 DOWNLOAD_FOLDER = "downloading"  # Files downloaded from Google Drive
@@ -13,7 +17,7 @@ PROCESSED_FOLDER = "got_from_local_helper_processed"  # Processed files received
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-def return_all_drive_data(include_trashed=True):
+def return_all_drive_data(include_trashed=False):
     """
     Fetches all files from Google Drive.
     :param include_trashed: Boolean flag to include/exclude trashed files.
@@ -46,7 +50,7 @@ def search_file(file_name):
     if not items:
         print(f"No files found matching: {file_name}")
         return []
-    
+
     for i in items:
         print(f"Found file: {i['name']} ({i['id']})")
 
@@ -118,18 +122,18 @@ def process_file(file_path):
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         return None
-        
+
 def return_drive_structure(folder_id = 'root', indent = 0):
     creds = credential_handler.get_creds()
     service = build("drive", "v3", credentials = creds)
-    
+
     query = f"'{folder_id}' in parents"
     results = service.files().list(
         q = query,
         spaces = 'drive',
         fields = "files(id, name, mimeType)",
     ).execute()
-    
+
     items = results.get('files', [])
     structure = []
     for item in items:
@@ -143,3 +147,25 @@ def return_drive_structure(folder_id = 'root', indent = 0):
         if item['mimeType'] == 'application/vnd.google-apps.folder':
             structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1))
     return structure
+
+#Save a file from the application to Drive
+def save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=262144):
+    try:
+        creds = credential_handler.get_creds()
+        service = build("drive", "v3", credentials = creds)
+
+        loc_file_name = file_name[8:]
+
+        upload_filename = os.path.basename(file_name)
+
+        file_metadata = {
+        'name': upload_filename,
+        'mimeType': mimetype
+        }
+        media = MediaFileUpload(loc_file_name, mimetype=mimetype, resumable=True)
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+        if(file):
+            return True
+    except:
+        raise HTTPException(status_code=500, detail=f"Error uploading file: {e}")
