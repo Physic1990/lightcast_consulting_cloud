@@ -99,6 +99,7 @@ export default function DriveData() {
 
     // Check if the selected file is an Excel file (.xlsx)
     if (!selectedFileName.endsWith(".xlsx")) {
+      console.log(selectedFileName)
       setStatus("Only .xlsx files can be processed.");
       setStatusType("error");
       return;
