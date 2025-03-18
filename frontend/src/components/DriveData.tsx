@@ -1,13 +1,11 @@
 import {
-  EditFilled,
   FileOutlined,
   FolderOutlined,
   QuestionOutlined,
-  StarFilled,
-  ToolFilled,
 } from "@ant-design/icons";
-import { Button, MenuProps, Spin, Alert, Modal } from "antd";
+import { Button, Spin, Alert, Modal } from "antd";
 import { useEffect, useState } from "react";
+import { DriveStructureData } from "../types";
 
 //Create format for processed data object
 interface ProcessedData {
@@ -16,9 +14,9 @@ interface ProcessedData {
 }
 
 export default function DriveData() {
-  const [driveData, setDriveData] = useState([]);
-  const [selectPath, setSelectPath] = useState([]);
-  let topLevelData;
+  const [driveData, setDriveData] = useState<DriveStructureData[] | null>([]);
+  const [selectPath, setSelectPath] = useState<DriveStructureData[]>([]);
+  const [topLevelData, setTopLevelData] = useState<DriveStructureData[]>([]);
 
   //Set selected file based on ID
   const [selectedFile, setSelectedFile] = useState("");
@@ -43,7 +41,7 @@ export default function DriveData() {
     await fetch("http://localhost:8000/drive_structure")
       .then((response) => response.json())
       .then((response) => {
-        const newData = [];
+        const newData: DriveStructureData[] = [];
         let prevIndent: number = 0;
         const folderLoc = [];
 
@@ -72,7 +70,7 @@ export default function DriveData() {
           prevIndent = response[i].indent;
         }
         setDriveData(newData);
-        topLevelData = newData;
+        setTopLevelData(newData);
       })
       .catch((error) => console.error("Failed to get Drive data.", error));
   };
@@ -128,7 +126,6 @@ export default function DriveData() {
       if (data.processed_file) {
         setStatus(`Model completed in ${elapsedTime.toFixed(2)} sec`);
         setStatusType("success");
-        console.log(data);
         setActiveData(data);
       } else {
         setStatus("Model failed to run.");
@@ -184,13 +181,11 @@ export default function DriveData() {
     getDriveData();
   }, []);
 
-  const handleFileSelect = (file) => {
-    console.log(selectedFile);
+  const handleFileSelect = (file: DriveStructureData) => {
     if (file.type == "folder") {
       setDriveData(file.contents);
       setSelectPath([...selectPath, file]);
     } else {
-      console.log(file.id);
       setSelectedFile(file.id);
       setSelectedFileName(file.name);
     }
@@ -200,7 +195,7 @@ export default function DriveData() {
     if (selectPath.length > 1) {
       setDriveData(selectPath[selectPath.length - 2].contents);
     } else {
-      getDriveData();
+      setDriveData(topLevelData);
     }
     selectPath.pop();
   };
@@ -262,7 +257,6 @@ export default function DriveData() {
             size="large"
             style={{ marginBottom: "10px", marginLeft: "-50px" }}
             onClick={() => {
-              console.log("Run Model clicked");
               runModel();
             }}
           >
@@ -293,7 +287,7 @@ export default function DriveData() {
               <div
                 key={"back"}
                 style={{
-                  width: "20%",
+                  width: "100%",
                   marginLeft: "5%",
                   height: "100%",
                   flex: "1",
@@ -317,12 +311,11 @@ export default function DriveData() {
           ) : (
             <></>
           )}
-          {driveData.map((file, index) => (
+          {driveData?.map((file, index) => (
             <>
               <div
                 key={file.id}
                 style={{
-                  width: "20%",
                   marginLeft: "5%",
                   height: "100%",
                   flex: "1",
@@ -338,21 +331,29 @@ export default function DriveData() {
                           boxShadow: "none",
                           backgroundColor: "#4e6fcb",
                           color: "white",
+                          width: "60%",
+                          overflow: "hidden",
+                          justifyContent: "flex-start",
                         }
                       : {
                           scale: "1.5",
                           cursor: "pointer",
                           boxShadow: "none",
                           backgroundColor: "#f4f4f4",
+                          width: "60%",
+                          overflow: "hidden",
+                          justifyContent: "flex-start",
                         }
                   }
                 >
                   {file.type == "folder" ? (
-                    <FolderOutlined />
+                    <FolderOutlined style={{ position: "relative", top: 1 }} />
                   ) : file.type == "file" ? (
-                    <FileOutlined />
+                    <FileOutlined style={{ position: "relative", top: 1 }} />
                   ) : (
-                    <QuestionOutlined />
+                    <QuestionOutlined
+                      style={{ position: "relative", left: 10, top: 1 }}
+                    />
                   )}
                   <br />
                   {file.name}
