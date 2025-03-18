@@ -10,19 +10,19 @@ DOWNLOAD_FOLDER = "downloading"  # Files downloaded from Google Drive
 PROCESSED_FOLDER = "got_from_local_helper_processed"  # Processed files received from Local Helper
 
 # Ensure directories exist
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+os.makedirs(DOWNLOAD_FOLDER, exist_ok = True)
+os.makedirs(PROCESSED_FOLDER, exist_ok = True)
 
-def return_all_drive_data(include_trashed=True):
+def return_all_drive_data(include_trashed = False):
     """
     Fetches all files from Google Drive.
     :param include_trashed: Boolean flag to include/exclude trashed files.
     :return: List of file metadata from Google Drive.
     """
     creds = credential_handler.get_creds()
-    service = build("drive", "v3", credentials=creds)
+    service = build("drive", "v3", credentials = creds)
 
-    query = None if include_trashed else "trashed = false"
+    query = None if include_trashed else "trashed=false"
     results = service.files().list(q=query).execute()
 
     items = results.get("files", [])
@@ -52,7 +52,7 @@ def search_file(file_name):
 
     return items
 
-def download_file(file_id, file_name=None):
+def download_file(file_id, file_name = None):
     """
     Downloads a file from Google Drive using its file ID.
     :param file_id: The Google Drive file ID.

@@ -7,6 +7,7 @@ import platform
 import subprocess
 from . import credential_handler
 from . import drive
+from . import backend
 
 app = FastAPI()
 
@@ -57,7 +58,7 @@ async def delete_member(memberID: int) -> dict:
 credential_handler.get_creds()
 
 @app.get("/drive_data")
-async def drive_data(include_trashed: bool = True):
+async def drive_data(include_trashed: bool = False):
     return drive.return_all_drive_data(include_trashed)
 
 @app.get("/search")
@@ -132,21 +133,4 @@ MODELS_FOLDER = os.getcwd() # get relative path of current working directory
 
 @app.get("/open_file_explorer", tags = ["utility"])
 async def open_file_explorer():
-    try:
-        # Check if the path exists
-        if not os.path.exists(MODELS_FOLDER):
-            raise HTTPException(status_code = 400, detail = f"Path does not exist: {MODELS_FOLDER}")
-
-        # Open the file explorer based on the operating system
-        if platform.system() == "Windows": # Windows
-            os.startfile(MODELS_FOLDER)
-        elif platform.system() == "Darwin": # macOS
-            subprocess.run(["open", MODELS_FOLDER])
-        else: # Linux and others
-            subprocess.run(["xdg-open", MODELS_FOLDER])
-
-        return f"File explorer opened at: {MODELS_FOLDER}"
-
-    except Exception as e:
-        raise HTTPException(status_code = 500, detail = f"Failed to open file explorer: {str(e)}")
-    return
+    return backend.open_file_explorer_request(MODELS_FOLDER)
