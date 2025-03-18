@@ -6,6 +6,8 @@ from googleapiclient.http import MediaFileUpload
 from os import stat
 from . import credential_handler
 import pandas as pd
+from fastapi import HTTPException
+
 
 # Define storage directories
 DOWNLOAD_FOLDER = "downloading"  # Files downloaded from Google Drive
@@ -15,7 +17,7 @@ PROCESSED_FOLDER = "got_from_local_helper_processed"  # Processed files received
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-def return_all_drive_data(include_trashed=True):
+def return_all_drive_data(include_trashed=False):
     """
     Fetches all files from Google Drive.
     :param include_trashed: Boolean flag to include/exclude trashed files.
@@ -48,7 +50,7 @@ def search_file(file_name):
     if not items:
         print(f"No files found matching: {file_name}")
         return []
-    
+
     for i in items:
         print(f"Found file: {i['name']} ({i['id']})")
 
@@ -120,18 +122,18 @@ def process_file(file_path):
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         return None
-        
+
 def return_drive_structure(folder_id = 'root', indent = 0):
     creds = credential_handler.get_creds()
     service = build("drive", "v3", credentials = creds)
-    
+
     query = f"'{folder_id}' in parents"
     results = service.files().list(
         q = query,
         spaces = 'drive',
         fields = "files(id, name, mimeType)",
     ).execute()
-    
+
     items = results.get('files', [])
     structure = []
     for item in items:
@@ -146,33 +148,24 @@ def return_drive_structure(folder_id = 'root', indent = 0):
             structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1))
     return structure
 
+#Save a file from the application to Drive
 def save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=262144):
-    creds = credential_handler.get_creds()
-    service = build("drive", "v3", credentials = creds)
-    
-    upload_filename = os.path.basename(file_name)
+    try:
+        creds = credential_handler.get_creds()
+        service = build("drive", "v3", credentials = creds)
 
-    file_metadata = {
-    'name': upload_filename,
-    'mimeType': mimetype
-    }
-    media = MediaFileUpload(file_name, mimetype=mimetype, resumable=True)
-    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-    print ('File ID: ' + file.get('id'))
+        loc_file_name = file_name[8:]
 
-    
-    # file_size = stat(file_name).st_size
+        upload_filename = os.path.basename(file_name)
 
-    # media = MediaFileUpload(file_name, mimetype=mimetype, resumable=resumable, chunksize=chunksize)
-    # # Add all the writable properties you want the file to have in the body!
-    # body = {"name": upload_filename} 
-    # request = service.files().create(body=body, media_body=media).execute()
-    # if file_size > chunksize:
-    #     response = None
-    #     while response is None:
-    #         chunk = request.next_chunk()
-    #         if chunk:
-    #             status, response = chunk
-    #             if status:
-    #                 print("Uploaded %d%%." % int(status.progress() * 100))
-    # print("Upload Complete!")
+        file_metadata = {
+        'name': upload_filename,
+        'mimeType': mimetype
+        }
+        media = MediaFileUpload(loc_file_name, mimetype=mimetype, resumable=True)
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+        if(file):
+            return True
+    except:
+        raise HTTPException(status_code=500, detail=f"Error uploading file: {e}")

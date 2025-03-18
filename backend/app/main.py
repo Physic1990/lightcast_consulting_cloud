@@ -57,7 +57,7 @@ async def delete_member(memberID: int) -> dict:
 credential_handler.get_creds()
 
 @app.get("/drive_data")
-async def drive_data(include_trashed: bool = True):
+async def drive_data(include_trashed: bool = False):
     return drive.return_all_drive_data(include_trashed)
 
 @app.get("/search")
@@ -73,7 +73,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 LOCAL_HELPER_URL = "http://127.0.0.1:9000/upload-file"
 
-PROCESSED_FOLDER = "backend/got_from_local_helper_processed"
+# PROCESSED_FOLDER = "backend/got_from_local_helper_processed"
+PROCESSED_FOLDER = os.path.join("backend", "got_from_local_helper_processed")
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
 
 @app.post("/run-local-model")
@@ -97,8 +98,7 @@ async def run_local_model(data: dict):
         processed_data = response.json()
 
         processed_filename = os.path.basename(file_path)
-        # processed_file_path = os.path.join(PROCESSED_FOLDER, processed_filename)
-        processed_file_path = PROCESSED_FOLDER + '/' + processed_filename
+        processed_file_path = os.path.join(PROCESSED_FOLDER, processed_filename)
 
         with open(processed_file_path, "w") as processed_file:
             processed_file.write(processed_data.get("processed_text", ""))
@@ -122,7 +122,7 @@ async def run_local_model(data: dict):
 
     except Exception as e:
         print(f"Error processing file: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)} teehee")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
         # Forward the request to the local helper app
         # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
         # response = requests.post("http://localhost:9000/run-model")
@@ -139,16 +139,19 @@ async def run_local_model(data: dict):
 async def drive_structure(folder_id: str = 'root'):
     return drive.return_drive_structure(folder_id)
 
+#Upload processed file from application to Drive
 @app.post("/file_upload")
 async def file_upload(data: dict):
     return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"))
 
+#Save file from application to local device
 @app.get("/file_download")
 async def file_download(file_path: str):
+    #Cut out "backend/" directory
+    loc_file_path = file_path[8:]
     try:
-        print(f'File path: {file_path}')
-        return FileResponse(file_path)
+        return FileResponse(loc_file_path)
     except Exception as e:
         print(f"Error processing file: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)} teehee")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
         

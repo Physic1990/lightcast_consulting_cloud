@@ -1,4 +1,4 @@
-import Icon, {
+import {
   EditFilled,
   FileOutlined,
   FolderOutlined,
@@ -6,7 +6,7 @@ import Icon, {
   StarFilled,
   ToolFilled,
 } from "@ant-design/icons";
-import { Button, Dropdown, MenuProps, Spin, Alert, Modal } from "antd";
+import { Button, MenuProps, Spin, Alert, Modal } from "antd";
 import { useEffect, useState } from "react";
 
 //Create format for processed data object
@@ -30,6 +30,13 @@ export default function DriveData() {
   const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
   const [activeData, setActiveData] = useState<ProcessedData | null>(null);
+
+  //Use to show confirmation modal for actions if not null
+  //Modal takes format "(modalName) operation (success ? Successful : Failed)"
+  const [confModal, setConfModal] = useState<{
+    modalName: string;
+    success: boolean;
+  } | null>(null);
 
   // Function to get Drive data
   const getDriveData = async () => {
@@ -68,6 +75,19 @@ export default function DriveData() {
         topLevelData = newData;
       })
       .catch((error) => console.error("Failed to get Drive data.", error));
+  };
+
+  const downloadBlob = (blob: Blob, file_name: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    // the filename you want
+    a.download = file_name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   // Function to run the model
@@ -122,42 +142,42 @@ export default function DriveData() {
     }
   };
 
-  // Menu items with handlers
-  const items: MenuProps["items"] = [
-    {
-      key: "1",
-      label: (
-        <p
-          onClick={() => {
-            console.log("Run Model clicked");
-            runModel();
-          }}
-          style={{ cursor: "pointer" }}
-        >
-          <ToolFilled style={{ marginRight: "10px" }} />
-          Run the Model
-        </p>
-      ),
-    },
-    {
-      key: "2",
-      label: (
-        <p onClick={() => console.log("Run Draft Operation clicked")}>
-          <EditFilled style={{ marginRight: "10px" }} />
-          Run Draft Operation
-        </p>
-      ),
-    },
-    {
-      key: "3",
-      label: (
-        <p onClick={() => console.log("Run Deliverable Preparation clicked")}>
-          <StarFilled style={{ marginRight: "10px" }} />
-          Run Deliverable Preparation
-        </p>
-      ),
-    },
-  ];
+  // // Menu items with handlers
+  // const items: MenuProps["items"] = [
+  //   {
+  //     key: "1",
+  //     label: (
+  //       <p
+  //         onClick={() => {
+  //           console.log("Run Model clicked");
+  //           runModel();
+  //         }}
+  //         style={{ cursor: "pointer" }}
+  //       >
+  //         <ToolFilled style={{ marginRight: "10px" }} />
+  //         Run the Model
+  //       </p>
+  //     ),
+  //   },
+  //   {
+  //     key: "2",
+  //     label: (
+  //       <p onClick={() => console.log("Run Draft Operation clicked")}>
+  //         <EditFilled style={{ marginRight: "10px" }} />
+  //         Run Draft Operation
+  //       </p>
+  //     ),
+  //   },
+  //   {
+  //     key: "3",
+  //     label: (
+  //       <p onClick={() => console.log("Run Deliverable Preparation clicked")}>
+  //         <StarFilled style={{ marginRight: "10px" }} />
+  //         Run Deliverable Preparation
+  //       </p>
+  //     ),
+  //   },
+  // ];
 
   useEffect(() => {
     console.log("Component mounted. Fetching drive data...");
@@ -192,7 +212,7 @@ export default function DriveData() {
   const handleDataSaveDrive = async () => {
     console.log(activeData?.hash + " saved to Drive");
     try {
-      const response = await fetch("http://localhost:8000/file_upload", {
+      await fetch("http://localhost:8000/file_upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -202,7 +222,12 @@ export default function DriveData() {
           resumable: true,
           chunksize: 262144,
         }),
-      });
+      })
+        .then((response) => response.json())
+        .then((response) =>
+          setConfModal({ modalName: "Drive", success: response })
+        )
+        .catch((error) => console.error(error));
     } catch (error) {
       console.error("Error saving file:", error);
     }
@@ -211,13 +236,10 @@ export default function DriveData() {
   const handleDataSaveLocal = async () => {
     console.log(activeData?.hash + " saved locally");
     await fetch(
-      `http://localhost:8000/file_download?file_path=${activeData?.processed_file}`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
+      `http://localhost:8000/file_download?file_path=${activeData?.processed_file}`
     )
-      .then((response) => console.log(response))
+      .then((response) => response.blob())
+      .then((blob) => downloadBlob(blob, activeData?.processed_file as string))
       .catch((error) => console.error(error));
   };
 
@@ -234,38 +256,19 @@ export default function DriveData() {
         }}
       >
         <ul style={{ textAlign: "center", alignContent: "center" }}>
-          <Dropdown menu={{ items }}>
-            <Button
-              className="lc_bt"
-              size="large"
-              style={{ marginBottom: "10px", marginLeft: "-50px" }}
-              onClick={() => console.log("Model Type 1 clicked")}
-            >
-              Model Type 1
-            </Button>
-          </Dropdown>
-          <br />
-          <Dropdown menu={{ items }}>
-            <Button
-              className="lc_bt"
-              size="large"
-              style={{ marginBottom: "10px", marginLeft: "-50px" }}
-              onClick={() => console.log("Model Type 2 clicked")}
-            >
-              Model Type 2
-            </Button>
-          </Dropdown>
-          <br />
-          <Dropdown menu={{ items }}>
-            <Button
-              className="lc_bt"
-              size="large"
-              style={{ marginLeft: "-50px" }}
-              onClick={() => console.log("Model Type 3 clicked")}
-            >
-              Model Type 3
-            </Button>
-          </Dropdown>
+          {/* <Dropdown menu={{ items }}> */}
+          <Button
+            className="lc_bt"
+            size="large"
+            style={{ marginBottom: "10px", marginLeft: "-50px" }}
+            onClick={() => {
+              console.log("Run Model clicked");
+              runModel();
+            }}
+          >
+            Send to Local Helper
+          </Button>
+          {/* </Dropdown> */}
         </ul>
       </div>
 
@@ -414,6 +417,20 @@ export default function DriveData() {
         <Button key="saveLocal" type="primary" onClick={handleDataSaveLocal}>
           Save Locally
         </Button>
+      </Modal>
+
+      {/* Modal for event notification */}
+      <Modal
+        open={confModal !== null}
+        onOk={() => setConfModal(null)}
+        onCancel={() => setConfModal(null)}
+        maskClosable
+        footer={[]}
+      >
+        <h2>
+          {confModal?.modalName} Operation{" "}
+          {confModal?.success ? "Successful" : "Failed"}
+        </h2>
       </Modal>
     </div>
   );
