@@ -13,6 +13,9 @@ interface ProcessedData {
   hash: string; //Store hash of original file for unique identification
 }
 
+//Constant for backend request endpoint
+const API_URL = "http://localhost:8000";
+
 export default function DriveData() {
   const [driveData, setDriveData] = useState<DriveStructureData[] | null>([]);
   const [selectPath, setSelectPath] = useState<DriveStructureData[]>([]);
@@ -38,7 +41,7 @@ export default function DriveData() {
 
   // Function to get Drive data
   const getDriveData = async () => {
-    await fetch("http://localhost:8000/drive_structure")
+    await fetch(`${API_URL}/drive_structure`)
       .then((response) => response.json())
       .then((response) => {
         const newData: DriveStructureData[] = [];
@@ -99,7 +102,7 @@ export default function DriveData() {
 
     // Check if the selected file is an Excel file (.xlsx)
     if (!selectedFileName.endsWith(".xlsx")) {
-      console.log(selectedFileName)
+      console.log(selectedFileName);
       setStatus("Only .xlsx files can be processed.");
       setStatusType("error");
       return;
@@ -113,7 +116,7 @@ export default function DriveData() {
     const startTime = Date.now(); // Track start time
 
     try {
-      const response = await fetch("http://localhost:8000/run-local-model", {
+      const response = await fetch(`${API_URL}/run-local-model`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: selectedFile }),
@@ -124,12 +127,14 @@ export default function DriveData() {
       setProcessingTime(elapsedTime);
       setLoading(false);
 
-      if (data.processed_file) {
-        setStatus(`Model completed in ${elapsedTime.toFixed(2)} sec`);
+      // if (data.processed_file) {
+      if (data.success) {
+        // setStatus(`Model completed in ${elapsedTime.toFixed(2)} sec`);
+        setStatus(`File delivered in ${elapsedTime.toFixed(2)} sec`);
         setStatusType("success");
-        setActiveData(data);
+        // setActiveData(data);
       } else {
-        setStatus("Model failed to run.");
+        setStatus("File failed to deliver.");
         setStatusType("error");
       }
     } catch (error) {
@@ -208,7 +213,7 @@ export default function DriveData() {
   const handleDataSaveDrive = async () => {
     console.log(activeData?.hash + " saved to Drive");
     try {
-      await fetch("http://localhost:8000/file_upload", {
+      await fetch(`${API_URL}/file_upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -232,7 +237,7 @@ export default function DriveData() {
   const handleDataSaveLocal = async () => {
     console.log(activeData?.hash + " saved locally");
     await fetch(
-      `http://localhost:8000/file_download?file_path=${activeData?.processed_file}`
+      `${API_URL}/file_download?file_path=${activeData?.processed_file}`
     )
       .then((response) => response.blob())
       .then((blob) => downloadBlob(blob, activeData?.processed_file as string))
@@ -392,15 +397,15 @@ export default function DriveData() {
       )}
 
       {/* Modal for data display */}
-      <Modal
+      {/* <Modal
         open={activeData !== null}
         onOk={handleDataSaveLocal}
         onCancel={handleDataClose}
         maskClosable
         footer={[]}
-      >
-        {/* Show processed data - must update with actual visualization */}
-        <h2>Processed Data</h2>
+      > */}
+      {/* Show processed data - must update with actual visualization */}
+      {/* <h2>Processed Data</h2>
         <p>Path: {activeData?.processed_file}</p>
         <p>Hash: {activeData?.hash}</p>
         <script
@@ -419,7 +424,7 @@ export default function DriveData() {
         <Button key="saveLocal" type="primary" onClick={handleDataSaveLocal}>
           Save Locally
         </Button>
-      </Modal>
+      </Modal> */}
 
       {/* Modal for event notification */}
       <Modal

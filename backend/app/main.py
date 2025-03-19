@@ -36,6 +36,7 @@ team_members = [
     {"id": "5", "item": "Caleb Mouat"}
 ]
 
+# ---------- BEGIN EXAMPLE FUNCTIONS ----------
 @app.get("/members", tags=["members"])
 async def get_members() -> dict:
     return { "data": team_members }
@@ -52,6 +53,8 @@ async def delete_member(memberID: int) -> dict:
             team_members.remove(member)
             return {"data": f"Member with id {memberID} has been removed."}
     return {"data": f"Member with id {memberID} not found"}
+
+# ---------- END EXAMPLE FUNCTIONS ----------
 
 # Google Drive Server Access Implementation
 credential_handler.get_creds()
@@ -97,28 +100,29 @@ async def run_local_model(data: dict):
         response.raise_for_status()
         processed_data = response.json()
 
-        processed_filename = os.path.basename(file_path)
-        processed_file_path = os.path.join(PROCESSED_FOLDER, processed_filename)
+        # processed_filename = os.path.basename(file_path)
+        # processed_file_path = os.path.join(PROCESSED_FOLDER, processed_filename)
 
-        with open(processed_file_path, "w") as processed_file:
-            processed_file.write(processed_data.get("processed_text", ""))
+        # with open(processed_file_path, "w") as processed_file:
+        #     processed_file.write(processed_data.get("processed_text", ""))
 
-        print(f"Processed file saved: {processed_file_path}")
+        # print(f"Processed file saved: {processed_file_path}")
 
-        #Generate hash for unique identification of file
-        h = hashlib.sha1()
+        # #Generate hash for unique identification of file
+        # h = hashlib.sha1()
 
-        #Open file for binary mode reading
-        with open(processed_file_path,'rb') as file:
+        # #Open file for binary mode reading
+        # with open(processed_file_path,'rb') as file:
 
-            #Loop through file
-            chunk = 0
-            while chunk != b'':
-                #Read 1024-byte chunk
-                chunk = file.read(1024)
-                h.update(chunk)
+        #     #Loop through file
+        #     chunk = 0
+        #     while chunk != b'':
+        #         #Read 1024-byte chunk
+        #         chunk = file.read(1024)
+        #         h.update(chunk)
 
-        return {"processed_file": processed_file_path, "hash": h.hexdigest()}
+        # return {"processed_file": processed_file_path, "hash": h.hexdigest()}
+        return {"success": processed_data}
 
     except Exception as e:
         print(f"Error processing file: {str(e)}")

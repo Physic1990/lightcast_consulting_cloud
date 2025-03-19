@@ -5,12 +5,12 @@ import LCHeader from "./LCHeader";
 export default function Home() {
   return (
     <div>
-      {/* <FileSearch /> */}
-      <LCHeader />
-      <div style={{ clear: "both" }}></div>
+      <div style={{ flex: 1, flexDirection: "row" }}>
+        <LCHeader />
+        {/* <FileSearch /> */}
+      </div>
+
       <DriveData />
-      {/* <Header />
-      <Members /> */}
     </div>
   );
 }
