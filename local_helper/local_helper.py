@@ -31,7 +31,7 @@ def open_file_explorer_request():
 
     if(selected_file.lower().endswith('.py')):
         update_terminal_log(f"Selected Python file {selected_file}")
-        with open(MODEL_STORAGE, 'wb') as file:
+        with open(MODEL_STORAGE, 'wb+') as file:
             pickle.dump(selected_file, file)
     else:
         update_terminal_log(f"No valid file selected; please select a .py file.")
@@ -122,7 +122,7 @@ def run_model(file_path):
 
     if file_extension == ".xlsx":
         active_data = file_path
-        with open(DATA_STORAGE, 'wb') as file:
+        with open(DATA_STORAGE, 'wb+') as file:
             pickle.dump(active_data, file)
         # return process_excel_file(file_path)
         return {"processed_file": file_path}
