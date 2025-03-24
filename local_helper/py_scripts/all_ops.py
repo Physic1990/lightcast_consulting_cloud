@@ -9,12 +9,14 @@ processed_data = {}
 for sheet_name, data in df.items():
     #The below is unique to each model
     if data.shape[1] >= 2:
+        data["Sum"] = data.iloc[:, 0] + data.iloc[:, 1]
+        data["Product"] = data.iloc[:, 0] * data.iloc[:, 1]
         data["Mean"] = data.iloc[:, :2].mean(axis=1)
 
         processed_data[sheet_name] = data
     #End unique section
 
-with pd.ExcelWriter(sys.argv[2], engine="openpyxl") as writer:
+with pd.ExcelWriter(sys.argv[1], engine="openpyxl") as writer:
     for sheet, data in df.items():
         data.to_excel(writer, sheet_name=sheet, index=False)
 

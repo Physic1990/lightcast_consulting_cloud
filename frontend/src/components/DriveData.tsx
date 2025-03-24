@@ -145,43 +145,6 @@ export default function DriveData() {
     }
   };
 
-  // // Menu items with handlers
-  // const items: MenuProps["items"] = [
-  //   {
-  //     key: "1",
-  //     label: (
-  //       <p
-  //         onClick={() => {
-  //           console.log("Run Model clicked");
-  //           runModel();
-  //         }}
-  //         style={{ cursor: "pointer" }}
-  //       >
-  //         <ToolFilled style={{ marginRight: "10px" }} />
-  //         Run the Model
-  //       </p>
-  //     ),
-  //   },
-  //   {
-  //     key: "2",
-  //     label: (
-  //       <p onClick={() => console.log("Run Draft Operation clicked")}>
-  //         <EditFilled style={{ marginRight: "10px" }} />
-  //         Run Draft Operation
-  //       </p>
-  //     ),
-  //   },
-  //   {
-  //     key: "3",
-  //     label: (
-  //       <p onClick={() => console.log("Run Deliverable Preparation clicked")}>
-  //         <StarFilled style={{ marginRight: "10px" }} />
-  //         Run Deliverable Preparation
-  //       </p>
-  //     ),
-  //   },
-  // ];
-
   useEffect(() => {
     console.log("Component mounted. Fetching drive data...");
     getDriveData();
@@ -266,7 +229,7 @@ export default function DriveData() {
               runModel();
             }}
           >
-            Send to Local Helper
+            Run all_ops.py
           </Button>
           {/* </Dropdown> */}
         </ul>

@@ -14,7 +14,7 @@ for sheet_name, data in df.items():
         processed_data[sheet_name] = data
     #End unique section
 
-with pd.ExcelWriter(sys.argv[2], engine="openpyxl") as writer:
+with pd.ExcelWriter(sys.argv[1], engine="openpyxl") as writer:
     for sheet, data in df.items():
         data.to_excel(writer, sheet_name=sheet, index=False)
 

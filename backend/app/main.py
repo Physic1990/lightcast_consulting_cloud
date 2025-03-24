@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+import json
 from typing import Union
 import requests
 import os
@@ -76,7 +77,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 LOCAL_HELPER_URL = "http://127.0.0.1:9000/upload-file"
 
-# PROCESSED_FOLDER = "backend/got_from_local_helper_processed"
 PROCESSED_FOLDER = os.path.join("backend", "got_from_local_helper_processed")
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
 
@@ -92,49 +92,19 @@ async def run_local_model(data: dict):
             raise HTTPException(status_code=500, detail="Failed to download file.")
 
         print(f"File downloaded successfully: {file_path}")
-
-        with open(file_path, "rb") as file:
-            files = {"file": file}
-            response = requests.post(LOCAL_HELPER_URL, files=files)
         
+        #SHOULD BE MODIFIED TO GET FULL FILE PATH FROM FRONTEND
+        file_data = {"file": os.path.basename(file_path)}
+        response = requests.post(LOCAL_HELPER_URL, json=file_data)
+
         response.raise_for_status()
         processed_data = response.json()
 
-        # processed_filename = os.path.basename(file_path)
-        # processed_file_path = os.path.join(PROCESSED_FOLDER, processed_filename)
-
-        # with open(processed_file_path, "w") as processed_file:
-        #     processed_file.write(processed_data.get("processed_text", ""))
-
-        # print(f"Processed file saved: {processed_file_path}")
-
-        # #Generate hash for unique identification of file
-        # h = hashlib.sha1()
-
-        # #Open file for binary mode reading
-        # with open(processed_file_path,'rb') as file:
-
-        #     #Loop through file
-        #     chunk = 0
-        #     while chunk != b'':
-        #         #Read 1024-byte chunk
-        #         chunk = file.read(1024)
-        #         h.update(chunk)
-
-        # return {"processed_file": processed_file_path, "hash": h.hexdigest()}
         return {"success": processed_data}
 
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
-        # Forward the request to the local helper app
-        # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
-        # response = requests.post("http://localhost:9000/run-model")
-        # print("Signal sent!")
-        # response.raise_for_status()  # Raise an error if the request fails
-        # returned_response = response.json()
-        # print(returned_response)
-        # return returned_response  # Return the response from the local helper
     except requests.exceptions.RequestException as e:
         # Handle any errors that occur
         raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")
