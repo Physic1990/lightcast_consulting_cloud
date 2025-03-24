@@ -123,8 +123,8 @@ async def run_local_model(data: dict):
         raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")
 
 @app.get("/drive_structure")
-async def drive_structure(folder_id: str = 'root'):
-    return drive.return_drive_structure(folder_id)
+async def drive_structure(folder_id: str = 'root', indent: int = 0, include_trashed: bool = False):
+    return drive.return_drive_structure(folder_id, indent, include_trashed)
 
 #----------------------------------------------------------
 # Temporary global variable for open_file_explorer function

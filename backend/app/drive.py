@@ -119,15 +119,17 @@ def process_file(file_path):
         print(f"Error processing file: {str(e)}")
         return None
         
-def return_drive_structure(folder_id = 'root', indent = 0):
+def return_drive_structure(folder_id = 'root', indent = 0, include_trashed = False):
     creds = credential_handler.get_creds()
     service = build("drive", "v3", credentials = creds)
     
     query = f"'{folder_id}' in parents"
+    if not include_trashed: # by default trash is included in the query at this point
+        query += " and trashed=false" # so we add this to the query to not include the trash files
     results = service.files().list(
         q = query,
         spaces = 'drive',
-        fields = "files(id, name, mimeType)",
+        fields = "files(id, name, mimeType, trashed)",
     ).execute()
     
     items = results.get('files', [])
@@ -137,9 +139,10 @@ def return_drive_structure(folder_id = 'root', indent = 0):
             "name": item['name'],
             "id": item['id'],
             "type": "folder" if item['mimeType'] == 'application/vnd.google-apps.folder' else "file",
-            "indent": indent
+            "indent": indent,
+            "trashed": item["trashed"]
         }
         structure.append(item_info)
         if item['mimeType'] == 'application/vnd.google-apps.folder':
-            structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1))
+            structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1, include_trashed = include_trashed))
     return structure
