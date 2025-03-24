@@ -49,7 +49,7 @@ def get_creds():
 def get_creds(session = None):
     """Get credentials from session storage"""
     
-    """
+    #"""
     if session is None:
         # If no session is provided, fall back to the previous token.json method
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -75,8 +75,9 @@ def get_creds(session = None):
             session["credentials"] = creds.to_json()
         
         return creds
-    """
+    #"""
     
+    """
     # Use the session-based method
     if session is None:
         raise ValueError("No session passed to get_creds ie session is None; pass a session.")
@@ -93,4 +94,5 @@ def get_creds(session = None):
         session["credentials"] = creds.to_json()
         
     return creds
+    """
 #

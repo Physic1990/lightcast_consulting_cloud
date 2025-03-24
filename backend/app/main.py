@@ -68,10 +68,13 @@ async def delete_member(memberID: int) -> dict:
     return {"data": f"Member with id {memberID} not found"}
 
 # OAuth2 configuration
-GOOGLE_CLIENT_ID = "your-client-id-from-creds.json"
-GOOGLE_CLIENT_SECRET = "your-client-secret-from-creds.json"
+#GOOGLE_CLIENT_ID = "client-id-from-creds.json"
+#GOOGLE_CLIENT_SECRET = "client-secret-from-creds.json"
 REDIRECT_URI = "http://localhost:8000/auth/callback"
-SCOPES = ["https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive.metadata.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/drive.file",
+          "https://www.googleapis.com/auth/docs",
+          "https://www.googleapis.com/auth/drive",
+          "https://www.googleapis.com/auth/drive.metadata.readonly"]
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
     authorizationUrl = "https://accounts.google.com/o/oauth2/auth",
@@ -118,9 +121,6 @@ async def callback(request: Request, code: str, state: str):
     return {"status": "authenticated"}
 
 # Google Drive Server Access Implementation
-
-# Previous token.json implementation
-#credential_handler.get_creds(Request.session)
 
 @app.get("/drive_data")
 async def drive_data(request: Request, include_trashed: bool = False):
