@@ -59,7 +59,14 @@ The backend will be available at http://localhost:8000.
 cd local_helper
 python3 local_helper.py
 ```
+
 This will launch a GUI application and also start a Flask server at http://localhost:9000.
+
+If missing Python dependencies:
+```bash
+python3 -m venv lightcast_env
+pip install requirements.txt
+```
 
 ## Contributors
 - Andrew Plum
