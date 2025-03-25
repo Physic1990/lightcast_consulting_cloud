@@ -236,20 +236,28 @@ export default function DriveData() {
         }}
       >
         <ul style={{ textAlign: "center", alignContent: "center" }}>
-          {scripts.map((script) => (
-            <li style={{ listStyleType: "none" }}>
-              <Button
-                className="lc_bt"
-                size="large"
-                style={{ marginBottom: "10px", marginLeft: "-50px" }}
-                onClick={() => {
-                  runModel(script);
-                }}
-              >
-                Run {script}
-              </Button>
-            </li>
-          ))}
+          {scripts.length > 0 ? (
+            scripts.map((script) => (
+              <li style={{ listStyleType: "none" }}>
+                <Button
+                  className="lc_bt"
+                  size="large"
+                  style={{ marginBottom: "10px", marginLeft: "-50px" }}
+                  onClick={() => {
+                    runModel(script);
+                  }}
+                >
+                  Run {script}
+                </Button>
+              </li>
+            ))
+          ) : (
+            <p style={{ listStyleType: "none", marginLeft: "-20%" }}>
+              Ensure you have selected a folder of Python scripts through the
+              local helper, then refresh!
+            </p>
+          )}
+          {}
         </ul>
       </div>
 
