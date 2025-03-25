@@ -32,6 +32,9 @@ export default function DriveData() {
   const [loading, setLoading] = useState(false); // Loading state
   const [activeData, setActiveData] = useState<ProcessedData | null>(null);
 
+  //Scripts found in the local folder
+  const [scripts, setScripts] = useState<string[]>([]);
+
   //Use to show confirmation modal for actions if not null
   //Modal takes format "(modalName) operation (success ? Successful : Failed)"
   const [confModal, setConfModal] = useState<{
@@ -92,7 +95,7 @@ export default function DriveData() {
   };
 
   // Function to run the model
-  const runModel = async () => {
+  const runModel = async (selectedScript: string) => {
     if (!selectedFile) {
       alert("Please select a file first!");
       setStatus("No file selected. Please choose a valid file.");
@@ -100,10 +103,14 @@ export default function DriveData() {
       return;
     }
 
-    // Check if the selected file is an Excel file (.xlsx)
-    if (!selectedFileName.endsWith(".xlsx")) {
+    //Declare regex for file names
+    // prettier-ignore
+    const filename_format = new RegExp(".*\.xl..?");
+
+    // Check if the selected file is an Excel file (.xl..?)
+    if (!filename_format.test(selectedFileName)) {
       console.log(selectedFileName);
-      setStatus("Only .xlsx files can be processed.");
+      setStatus("Only Excel files can be processed.");
       setStatusType("error");
       return;
     }
@@ -119,7 +126,7 @@ export default function DriveData() {
       const response = await fetch(`${API_URL}/run-local-model`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file_id: selectedFile }),
+        body: JSON.stringify({ file_id: selectedFile, script: selectedScript }),
       });
 
       const data = await response.json();
@@ -145,9 +152,18 @@ export default function DriveData() {
     }
   };
 
+  const getScripts = async () => {
+    await fetch(`${API_URL}/script_folder`)
+      .then((response) => response.json())
+      .then((response) => setScripts(response))
+      .catch((error) => console.error(error));
+  };
+
   useEffect(() => {
     console.log("Component mounted. Fetching drive data...");
     getDriveData();
+
+    getScripts();
   }, []);
 
   const handleFileSelect = (file: DriveStructureData) => {
@@ -220,18 +236,20 @@ export default function DriveData() {
         }}
       >
         <ul style={{ textAlign: "center", alignContent: "center" }}>
-          {/* <Dropdown menu={{ items }}> */}
-          <Button
-            className="lc_bt"
-            size="large"
-            style={{ marginBottom: "10px", marginLeft: "-50px" }}
-            onClick={() => {
-              runModel();
-            }}
-          >
-            Run all_ops.py
-          </Button>
-          {/* </Dropdown> */}
+          {scripts.map((script) => (
+            <li style={{ listStyleType: "none" }}>
+              <Button
+                className="lc_bt"
+                size="large"
+                style={{ marginBottom: "10px", marginLeft: "-50px" }}
+                onClick={() => {
+                  runModel(script);
+                }}
+              >
+                Run {script}
+              </Button>
+            </li>
+          ))}
         </ul>
       </div>
 

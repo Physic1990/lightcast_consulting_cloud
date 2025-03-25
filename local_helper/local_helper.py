@@ -1,6 +1,7 @@
 import os
 import pickle
 import platform
+import re
 import subprocess
 import time
 import pandas as pd
@@ -16,7 +17,6 @@ app = Flask(__name__)
 # PROCESSED_FOLDER = os.path.join("..", "backend", "got_from_local_helper_processed")
 # os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # os.makedirs(PROCESSED_FOLDER, exist_ok=True)
-PYSCRIPT_FOLDER = "py_scripts"
 
 #Where is the selected model pickled?
 MODEL_STORAGE = os.path.join('pickles','model_pickle')
@@ -25,14 +25,14 @@ DATA_STORAGE = os.path.join('pickles', 'data_pickle')
 
 #Open file explorer to select model
 def open_file_explorer_request():
-    selected_folder = filedialog.askdirectory(initialdir=(os.getcwd() + PYSCRIPT_FOLDER), title="Select a Folder", )
+    selected_folder = filedialog.askdirectory(initialdir=(os.getcwd()), title="Select a Folder", )
 
-    if(selected_folder.lower()):
+    if(selected_folder):
         update_terminal_log(f"Selected Python script folder {selected_folder}")
         with open(MODEL_STORAGE, 'wb+') as file:
             pickle.dump(selected_folder, file)
     else:
-        update_terminal_log(f"No valid folder selected; please select a .py file.")
+        update_terminal_log(f"No valid folder selected.")
         return
 
 #Cleanup for when local helper is closed
@@ -58,14 +58,20 @@ def process_excel_file(run_script: str):
     data_selected = (os.path.getsize(DATA_STORAGE) > 0)
     model_selected = (os.path.getsize(MODEL_STORAGE) > 0)
     if not(data_selected and model_selected):
-        update_terminal_log("Must select data and model.")
+        update_terminal_log("Must select data and then model.")
+        return
+
+    #Check that the active data exists
+    if(not os.path.exists(active_data)):
+        update_terminal_log(f"{active_data} does not exist on the local system.")
         return
 
     try:
         start_time = time.time()
         update_terminal_log(f"Processing started for: {active_data}")
 
-        python_model = os.path.join(PYSCRIPT_FOLDER, run_script)
+        with open(MODEL_STORAGE, 'rb+') as file:
+            python_model = os.path.join(pickle.load(file), run_script)
 
         #Run the model.py subprocess on active_data
         subprocess.run(["python", python_model, active_data], capture_output=True, text=True)
@@ -90,7 +96,8 @@ def run_model(file_path, model_name):
     _, file_extension = os.path.splitext(file_path)
     file_extension = file_extension.lower()
 
-    if file_extension == ".xlsx":
+    reg_exp = re.compile(".*\\.xl..?")
+    if re.match(reg_exp, file_extension):
         active_data = file_path
         with open(DATA_STORAGE, 'wb+') as file:
             pickle.dump(active_data, file)
@@ -105,16 +112,28 @@ def run_model(file_path, model_name):
 @app.route("/upload-file", methods=["POST"])
 def upload_file():
     file_path = request.json['file']
+    py_script = request.json['script']
 
     update_terminal_log(f"Received file for processing: {file_path}")
 
-    response = run_model(os.path.join("local_data", file_path), "all_ops.py")
+    response = run_model(os.path.join("local_data", file_path), py_script)
 
     if "error" in response:
         update_terminal_log(f"Error: {response['error']}")
         return jsonify({"error": "Something went wrong in file delivery."})
 
     return jsonify({"success": "File delivered."})
+
+@app.route("/scripts-folder", methods=["GET"])
+def get_scripts_folder():
+    #Make sure the folder is selected
+    if(os.path.getsize(MODEL_STORAGE) <= 0):
+        return {"error": "No script folder selected."}
+    
+    with open(MODEL_STORAGE, "rb+") as file:
+        scripts_folder = pickle.load(file)
+    
+    return os.listdir(scripts_folder) 
 
 # Start Flask API in a separate thread
 def start_flask():
@@ -126,9 +145,6 @@ def start_gui():
 
     terminal = scrolledtext.ScrolledText(root, width=80, height=20, wrap=tk.WORD)
     terminal.pack()
-
-    run_button = tk.Button(root, text="Run Model", command=process_excel_file)
-    run_button.pack(side=tk.RIGHT)
 
     models_button = tk.Button(root, text="Select Model Folder", command=open_file_explorer_request)
     models_button.pack(side=tk.RIGHT)

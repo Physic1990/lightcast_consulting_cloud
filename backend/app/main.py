@@ -75,7 +75,7 @@ async def download(file_id: Union[str, None] = None, file_name: Union[str, None]
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-LOCAL_HELPER_URL = "http://127.0.0.1:9000/upload-file"
+LOCAL_HELPER_URL = "http://127.0.0.1:9000"
 
 PROCESSED_FOLDER = os.path.join("backend", "got_from_local_helper_processed")
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
@@ -83,8 +83,9 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
 @app.post("/run-local-model")
 async def run_local_model(data: dict):
     file_id = data.get("file_id")
-    if not file_id:
-        raise HTTPException(status_code=400, detail="File ID is required.")
+    script = data.get('script')
+    if not file_id or not script:
+        raise HTTPException(status_code=400, detail="File ID and script selection are required.")
 
     try:
         file_path = drive.download_file(file_id)
@@ -94,8 +95,8 @@ async def run_local_model(data: dict):
         print(f"File downloaded successfully: {file_path}")
         
         #SHOULD BE MODIFIED TO GET FULL FILE PATH FROM FRONTEND
-        file_data = {"file": os.path.basename(file_path)}
-        response = requests.post(LOCAL_HELPER_URL, json=file_data)
+        file_data = {"file": os.path.basename(file_path), 'script': script}
+        response = requests.post(f"{LOCAL_HELPER_URL}/upload-file", json=file_data)
 
         response.raise_for_status()
         processed_data = response.json()
@@ -108,6 +109,11 @@ async def run_local_model(data: dict):
     except requests.exceptions.RequestException as e:
         # Handle any errors that occur
         raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")
+
+@app.get("/script_folder")
+async def get_scripts_folder():
+    response = requests.get(f"{LOCAL_HELPER_URL}/scripts-folder")
+    return response.json()
 
 @app.get("/drive_structure")
 async def drive_structure(folder_id: str = 'root'):
