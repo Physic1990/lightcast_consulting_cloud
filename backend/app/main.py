@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+import json
 from typing import Union
 import requests
 import os
@@ -36,6 +37,7 @@ team_members = [
     {"id": "5", "item": "Caleb Mouat"}
 ]
 
+# ---------- BEGIN EXAMPLE FUNCTIONS ----------
 @app.get("/members", tags=["members"])
 async def get_members() -> dict:
     return { "data": team_members }
@@ -52,6 +54,8 @@ async def delete_member(memberID: int) -> dict:
             team_members.remove(member)
             return {"data": f"Member with id {memberID} has been removed."}
     return {"data": f"Member with id {memberID} not found"}
+
+# ---------- END EXAMPLE FUNCTIONS ----------
 
 # Google Drive Server Access Implementation
 credential_handler.get_creds()
@@ -71,17 +75,17 @@ async def download(file_id: Union[str, None] = None, file_name: Union[str, None]
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-LOCAL_HELPER_URL = "http://127.0.0.1:9000/upload-file"
+LOCAL_HELPER_URL = "http://127.0.0.1:9000"
 
-# PROCESSED_FOLDER = "backend/got_from_local_helper_processed"
 PROCESSED_FOLDER = os.path.join("backend", "got_from_local_helper_processed")
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
 
 @app.post("/run-local-model")
 async def run_local_model(data: dict):
     file_id = data.get("file_id")
-    if not file_id:
-        raise HTTPException(status_code=400, detail="File ID is required.")
+    script = data.get('script')
+    if not file_id or not script:
+        raise HTTPException(status_code=400, detail="File ID and script selection are required.")
 
     try:
         file_path = drive.download_file(file_id)
@@ -89,51 +93,27 @@ async def run_local_model(data: dict):
             raise HTTPException(status_code=500, detail="Failed to download file.")
 
         print(f"File downloaded successfully: {file_path}")
-
-        with open(file_path, "rb") as file:
-            files = {"file": file}
-            response = requests.post(LOCAL_HELPER_URL, files=files)
         
+        #SHOULD BE MODIFIED TO GET FULL FILE PATH FROM FRONTEND
+        file_data = {"file": os.path.basename(file_path), 'script': script}
+        response = requests.post(f"{LOCAL_HELPER_URL}/upload-file", json=file_data)
+
         response.raise_for_status()
         processed_data = response.json()
 
-        processed_filename = os.path.basename(file_path)
-        processed_file_path = os.path.join(PROCESSED_FOLDER, processed_filename)
-
-        with open(processed_file_path, "w") as processed_file:
-            processed_file.write(processed_data.get("processed_text", ""))
-
-        print(f"Processed file saved: {processed_file_path}")
-
-        #Generate hash for unique identification of file
-        h = hashlib.sha1()
-
-        #Open file for binary mode reading
-        with open(processed_file_path,'rb') as file:
-
-            #Loop through file
-            chunk = 0
-            while chunk != b'':
-                #Read 1024-byte chunk
-                chunk = file.read(1024)
-                h.update(chunk)
-
-        return {"processed_file": processed_file_path, "hash": h.hexdigest()}
+        return {"success": processed_data}
 
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
-        # Forward the request to the local helper app
-        # response = requests.post("http://host.docker.internal:9000/run-model", timeout=5)
-        # response = requests.post("http://localhost:9000/run-model")
-        # print("Signal sent!")
-        # response.raise_for_status()  # Raise an error if the request fails
-        # returned_response = response.json()
-        # print(returned_response)
-        # return returned_response  # Return the response from the local helper
     except requests.exceptions.RequestException as e:
         # Handle any errors that occur
         raise HTTPException(status_code=500, detail=f"Error connecting to local helper: {str(e)}")
+
+@app.get("/script_folder")
+async def get_scripts_folder():
+    response = requests.get(f"{LOCAL_HELPER_URL}/scripts-folder")
+    return response.json()
 
 @app.get("/drive_structure")
 async def drive_structure(folder_id: str = 'root'):
