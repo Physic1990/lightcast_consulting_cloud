@@ -33,9 +33,9 @@ app.add_middleware(
 # Session middleware
 app.add_middleware(
     SessionMiddleware,
-    secret_key = "your-secret-key-keep-it-safe",
-    session_cookie = "session_cookie",
-    max_age = 60 # time in seconds the current session lasts
+    secret_key = "XA99wx1rfjygvR4qAvt3Kb9uqYkKrWabpZXQ16oGdoaQYqmQWRdcWZhDftdshXSh", # change as desired and add as environment variabel
+    session_cookie = "lightcast_consulting_cloud_app_session",
+    max_age = 3600 # time in seconds the current session lasts
 )
 
 @app.get("/")
@@ -68,8 +68,6 @@ async def delete_member(memberID: int) -> dict:
     return {"data": f"Member with id {memberID} not found"}
 
 # OAuth2 configuration
-#GOOGLE_CLIENT_ID = "client-id-from-creds.json"
-#GOOGLE_CLIENT_SECRET = "client-secret-from-creds.json"
 REDIRECT_URI = "http://localhost:8000/auth/callback"
 SCOPES = ["https://www.googleapis.com/auth/drive.file",
           "https://www.googleapis.com/auth/docs",
