@@ -7,8 +7,6 @@ from typing import Union
 import uuid
 import os
 import requests
-import platform
-import subprocess
 from . import credential_handler
 from . import drive
 from . import backend
@@ -20,6 +18,14 @@ origins = [
     "https://localhost:3000",
     "localhost:3000"
 ]
+
+# OAuth2 configuration
+REDIRECT_URI = "http://localhost:8000/auth/callback"
+
+SCOPES = ["https://www.googleapis.com/auth/drive.file",
+          "https://www.googleapis.com/auth/docs",
+          "https://www.googleapis.com/auth/drive",
+          "https://www.googleapis.com/auth/drive.metadata.readonly"]
 
 # Cross-Origin Resource Sharing middleware
 app.add_middleware(
@@ -66,19 +72,6 @@ async def delete_member(memberID: int) -> dict:
             team_members.remove(member)
             return {"data": f"Member with id {memberID} has been removed."}
     return {"data": f"Member with id {memberID} not found"}
-
-# OAuth2 configuration
-REDIRECT_URI = "http://localhost:8000/auth/callback"
-SCOPES = ["https://www.googleapis.com/auth/drive.file",
-          "https://www.googleapis.com/auth/docs",
-          "https://www.googleapis.com/auth/drive",
-          "https://www.googleapis.com/auth/drive.metadata.readonly"]
-
-oauth2_scheme = OAuth2AuthorizationCodeBearer(
-    authorizationUrl = "https://accounts.google.com/o/oauth2/auth",
-    tokenUrl = "https://oauth2.googleapis.com/token",
-    scopes = {"drive": " ".join(SCOPES)}
-)
 
 @app.get("/auth/login")
 async def login(request: Request):
