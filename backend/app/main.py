@@ -1,6 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi.security import OAuth2AuthorizationCodeBearer
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from google_auth_oauthlib.flow import Flow
+import uuid
 import json
 from typing import Union
 import requests
@@ -17,6 +21,14 @@ origins = [
     "localhost:3000"
 ]
 
+# OAuth2 configuration
+REDIRECT_URI = "http://localhost:8000/auth/callback"
+
+SCOPES = ["https://www.googleapis.com/auth/drive.file",
+          "https://www.googleapis.com/auth/docs",
+          "https://www.googleapis.com/auth/drive",
+          "https://www.googleapis.com/auth/drive.metadata.readonly"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -25,9 +37,17 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+# Session middleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key = "XA99wx1rfjygvR4qAvt3Kb9uqYkKrWabpZXQ16oGdoaQYqmQWRdcWZhDftdshXSh", # Change as desired and add as environment variable
+    session_cookie = "lightcast_consulting_cloud_app_session",
+    max_age = 3600 # Time in seconds the current session lasts
+)
+
 @app.get("/")
 def read_root():
-    return {"message": "Hello, Team! Welcome to Lightcast Consulting Cloud API"}
+    return {"message": "Hello, Team! Welcome to the Lightcast Consulting Cloud API"}
 
 team_members = [
     {"id": "1", "item": "Ian King"},
@@ -57,28 +77,64 @@ async def delete_member(memberID: int) -> dict:
 
 # ---------- END EXAMPLE FUNCTIONS ----------
 
-# Google Drive Server Access Implementation
-credential_handler.get_creds()
+# Drive authentication
+@app.get("/auth/login")
+async def login(request: Request):
+    state = str(uuid.uuid4())
+    request.session["state"] = state
+    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    creds_path = os.path.join(script_dir, "creds.json")
+    
+    flow = Flow.from_client_secrets_file(
+        creds_path,
+        scopes = SCOPES,
+        redirect_uri = REDIRECT_URI
+    )
+    authorization_url, _ = flow.authorization_url(
+        access_type = 'offline',
+        state=state,
+        include_granted_scopes = 'true'
+    )
+    return {"authorization_url": authorization_url}
+
+@app.get("/auth/callback")
+async def callback(request: Request, code: str, state: str):
+    if state != request.session.get("state"):
+        raise HTTPException(status_code = 400, detail = "Invalid state parameter")
+    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    creds_path = os.path.join(script_dir, "creds.json")
+    
+    flow = Flow.from_client_secrets_file(
+        creds_path,
+        scopes = SCOPES,
+        redirect_uri = REDIRECT_URI
+    )
+    flow.fetch_token(code = code)
+    
+    request.session["credentials"] = flow.credentials.to_json()
+    return {"status": "authenticated"}  
 
 @app.get("/drive_data")
-async def drive_data(include_trashed: bool = False):
-    return drive.return_all_drive_data(include_trashed)
+async def drive_data(request: Request, include_trashed: bool = False):
+    creds = credential_handler.get_creds(request.session)
+    return drive.return_all_drive_data(include_trashed, creds)
 
 @app.get("/search")
-async def search(file_name: str):
-    return drive.search_file(file_name)
+async def search(request: Request, file_name: str):
+    creds = credential_handler.get_creds(request.session)
+    return drive.search_file(file_name, creds)
 
 @app.get("/download")
-async def download(file_id: Union[str, None] = None, file_name: Union[str, None] = None):
-    return drive.download_file(file_id, file_name)
+async def download(request: Request, file_id: Union[str, None] = None, file_name: Union[str, None] = None):
+    creds = credential_handler.get_creds(request.session)
+    return drive.download_file(file_id, file_name, creds)
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
 LOCAL_HELPER_URL = "http://127.0.0.1:9000"
-
-PROCESSED_FOLDER = os.path.join("backend", "got_from_local_helper_processed")
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)  # Ensure processed folder exists
 
 @app.post("/run-local-model")
 async def run_local_model(data: dict):
@@ -116,19 +172,19 @@ async def get_scripts_folder():
     return response.json()
 
 @app.get("/drive_structure")
-async def drive_structure(folder_id: str = 'root'):
-    return drive.return_drive_structure(folder_id)
+async def drive_structure(request: Request, folder_id: str = 'root', indent: int = 0, include_trashed: bool = False):
+    creds = credential_handler.get_creds(request.session)
+    return drive.return_drive_structure(folder_id, indent, include_trashed, creds)
 
 #Upload processed file from application to Drive
 @app.post("/file_upload")
 async def file_upload(data: dict):
-    return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"))
+    creds = credential_handler.get_creds(request.session)
+    return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"), creds=creds)
 
 #Save file from application to local device
 @app.get("/file_download")
 async def file_download(file_path: str):
-    #Cut out "backend/" directory
-    loc_file_path = file_path[8:]
     try:
         return FileResponse(loc_file_path)
     except Exception as e:

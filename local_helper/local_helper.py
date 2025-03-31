@@ -12,12 +12,6 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-# UPLOAD_FOLDER = "received_from_backend"
-# PROCESSED_FOLDER = "processed_files"
-# PROCESSED_FOLDER = os.path.join("..", "backend", "got_from_local_helper_processed")
-# os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-# os.makedirs(PROCESSED_FOLDER, exist_ok=True)
-
 #Where is the selected model pickled?
 MODEL_STORAGE = os.path.join('pickles','model_pickle')
 #Where is the selected data pickled?
@@ -37,8 +31,6 @@ def open_file_explorer_request():
 
 #Cleanup for when local helper is closed
 def on_closing():
-    # if os.path.exists(MODEL_STORAGE):
-        # os.remove(MODEL_STORAGE)
     if os.path.exists(DATA_STORAGE):
         os.remove(DATA_STORAGE)
 

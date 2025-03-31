@@ -17,13 +17,15 @@ PROCESSED_FOLDER = "got_from_local_helper_processed"  # Processed files received
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-def return_all_drive_data(include_trashed=False):
+def return_all_drive_data(include_trashed=False, creds = None):
     """
     Fetches all files from Google Drive.
     :param include_trashed: Boolean flag to include/exclude trashed files.
     :return: List of file metadata from Google Drive.
     """
-    creds = credential_handler.get_creds()
+    if creds is None:
+        raise ValueError("Credentials are None; need to authenticate before calling this function.")
+
     service = build("drive", "v3", credentials=creds)
 
     query = None if include_trashed else "trashed = false"
@@ -40,8 +42,10 @@ def return_all_drive_data(include_trashed=False):
 
     return items
 
-def search_file(file_name):
-    creds = credential_handler.get_creds()
+def search_file(file_name, creds = None):
+    if creds is None:
+        raise ValueError("Credentials are None; need to authenticate before calling this function.")
+
     service = build("drive", "v3", credentials=creds)
     query = f"name = '{file_name}'"
     results = service.files().list(q=query).execute()
@@ -56,14 +60,16 @@ def search_file(file_name):
 
     return items
 
-def download_file(file_id, file_name=None):
+def download_file(file_id, file_name=None, creds = None):
     """
     Downloads a file from Google Drive using its file ID.
     :param file_id: The Google Drive file ID.
     :param file_name: (Optional) Custom filename to save the file.
     :return: Local file path of the downloaded file.
     """
-    creds = credential_handler.get_creds()
+    if creds is None:
+        raise ValueError("Credentials are None; need to authenticate before calling this function.")
+
     service = build("drive", "v3", credentials=creds)
 
     request = service.files().get_media(fileId=file_id)
@@ -123,17 +129,21 @@ def process_file(file_path):
         print(f"Error processing file: {str(e)}")
         return None
 
-def return_drive_structure(folder_id = 'root', indent = 0):
-    creds = credential_handler.get_creds()
+def return_drive_structure(folder_id = 'root', indent = 0, include_trashed = False, creds = None):
+    if creds is None:
+        raise ValueError("Credentials are None; need to authenticate before calling this function.")
+    
     service = build("drive", "v3", credentials = creds)
-
+    
     query = f"'{folder_id}' in parents"
+    if not include_trashed: # by default trash is included in the query at this point
+        query += " and trashed=false" # so we add this to the query to not include the trash files
     results = service.files().list(
         q = query,
         spaces = 'drive',
-        fields = "files(id, name, mimeType)",
+        fields = "files(id, name, mimeType, trashed)",
     ).execute()
-
+    
     items = results.get('files', [])
     structure = []
     for item in items:
@@ -141,17 +151,20 @@ def return_drive_structure(folder_id = 'root', indent = 0):
             "name": item['name'],
             "id": item['id'],
             "type": "folder" if item['mimeType'] == 'application/vnd.google-apps.folder' else "file",
-            "indent": indent
+            "indent": indent,
+            "trashed": item["trashed"]
         }
         structure.append(item_info)
         if item['mimeType'] == 'application/vnd.google-apps.folder':
-            structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1))
+            structure.extend(return_drive_structure(folder_id = item['id'], indent = indent + 1, include_trashed = include_trashed, creds = creds))
     return structure
 
 #Save a file from the application to Drive
-def save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=262144):
+def save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=262144, creds = None):
     try:
-        creds = credential_handler.get_creds()
+        if creds is None:
+            raise ValueError("Credentials are None; need to authenticate before calling this function.")
+
         service = build("drive", "v3", credentials = creds)
 
         loc_file_name = file_name[8:]

@@ -30,7 +30,9 @@ export default function DriveData() {
   ); // Status Type
   const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
-  const [activeData, setActiveData] = useState<ProcessedData | null>(null);
+
+  //Authentication failed; show login button
+  const [authError, setAuthError] = useState(false);
 
   //Scripts found in the local folder
   const [scripts, setScripts] = useState<string[]>([]);
@@ -50,6 +52,12 @@ export default function DriveData() {
         const newData: DriveStructureData[] = [];
         let prevIndent: number = 0;
         const folderLoc = [];
+
+        if ("detail" in response && response["detail"] == "Not authenticated") {
+          console.error("Could not retrieve Drive data, unauthenticated.");
+          setAuthError(true);
+          return;
+        }
 
         for (let i = 0; i < response.length; i++) {
           response[i].contents = [];
@@ -79,19 +87,6 @@ export default function DriveData() {
         setTopLevelData(newData);
       })
       .catch((error) => console.error("Failed to get Drive data.", error));
-  };
-
-  const downloadBlob = (blob: Blob, file_name: string) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    // the filename you want
-    a.download = file_name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
   };
 
   // Function to run the model
@@ -185,47 +180,17 @@ export default function DriveData() {
     selectPath.pop();
   };
 
-  const handleDataClose = () => {
-    setActiveData(null);
-  };
-
-  const handleDataSaveDrive = async () => {
-    console.log(activeData?.hash + " saved to Drive");
-    try {
-      await fetch(`${API_URL}/file_upload`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_name: activeData?.processed_file,
-          mimetype: "application/octet-stream",
-          upload_filename: activeData?.processed_file,
-          resumable: true,
-          chunksize: 262144,
-        }),
-      })
-        .then((response) => response.json())
-        .then((response) =>
-          setConfModal({ modalName: "Drive", success: response })
-        )
-        .catch((error) => console.error(error));
-    } catch (error) {
-      console.error("Error saving file:", error);
-    }
-  };
-
-  const handleDataSaveLocal = async () => {
-    console.log(activeData?.hash + " saved locally");
-    await fetch(
-      `${API_URL}/file_download?file_path=${activeData?.processed_file}`
-    )
-      .then((response) => response.blob())
-      .then((blob) => downloadBlob(blob, activeData?.processed_file as string))
+  //Run through login flow
+  const loginFlow = async () => {
+    await fetch(`${API_URL}/auth/login`)
+      .then((response) => response.json())
+      .then((response) => window.open(response["authorization_url"]))
       .catch((error) => console.error(error));
   };
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
-      <h2>Run Model on Selected File</h2>
+      <h2>Select a Model</h2>
 
       {/* Drive Data Section */}
       <div
@@ -306,63 +271,76 @@ export default function DriveData() {
           ) : (
             <></>
           )}
-          {driveData?.map((file, index) => (
-            <>
-              <div
-                key={file.id}
-                style={{
-                  marginLeft: "5%",
-                  height: "100%",
-                  flex: "1",
-                }}
-              >
-                <Button
-                  onClick={() => handleFileSelect(file)}
-                  style={
-                    file.id === selectedFile
-                      ? {
-                          scale: "1.5",
-                          cursor: "pointer",
-                          boxShadow: "none",
-                          backgroundColor: "#4e6fcb",
-                          color: "white",
-                          width: "60%",
-                          overflow: "hidden",
-                          justifyContent: "flex-start",
-                        }
-                      : {
-                          scale: "1.5",
-                          cursor: "pointer",
-                          boxShadow: "none",
-                          backgroundColor: "#f4f4f4",
-                          width: "60%",
-                          overflow: "hidden",
-                          justifyContent: "flex-start",
-                        }
-                  }
-                >
-                  {file.type == "folder" ? (
-                    <FolderOutlined style={{ position: "relative", top: 1 }} />
-                  ) : file.type == "file" ? (
-                    <FileOutlined style={{ position: "relative", top: 1 }} />
-                  ) : (
-                    <QuestionOutlined
-                      style={{ position: "relative", left: 10, top: 1 }}
-                    />
-                  )}
-                  <br />
-                  {file.name}
-                </Button>
-              </div>
-              {(index + 1) % 3 === 0 ? (
+          {authError ? (
+            <div style={{ flex: "1" }}>
+              {/* Bit obnoxious for now, should be changed */}
+              <p>Please</p>
+              <Button style={{ scale: "2" }} type="primary" onClick={loginFlow}>
+                Log In
+              </Button>
+              <p>to continue!</p>
+            </div>
+          ) : (
+            driveData?.map((file, index) => (
+              <>
                 <div
-                  style={{ flexBasis: "100%", height: "0", marginTop: "5%" }}
-                />
-              ) : (
-                <></>
-              )}
-            </>
-          ))}
+                  key={file.id}
+                  style={{
+                    marginLeft: "5%",
+                    height: "100%",
+                    flex: "1",
+                  }}
+                >
+                  <Button
+                    onClick={() => handleFileSelect(file)}
+                    style={
+                      file.id === selectedFile
+                        ? {
+                            scale: "1.5",
+                            cursor: "pointer",
+                            boxShadow: "none",
+                            backgroundColor: "#4e6fcb",
+                            color: "white",
+                            width: "60%",
+                            overflow: "hidden",
+                            justifyContent: "flex-start",
+                          }
+                        : {
+                            scale: "1.5",
+                            cursor: "pointer",
+                            boxShadow: "none",
+                            backgroundColor: "#f4f4f4",
+                            width: "60%",
+                            overflow: "hidden",
+                            justifyContent: "flex-start",
+                          }
+                    }
+                  >
+                    {file.type == "folder" ? (
+                      <FolderOutlined
+                        style={{ position: "relative", top: 1 }}
+                      />
+                    ) : file.type == "file" ? (
+                      <FileOutlined style={{ position: "relative", top: 1 }} />
+                    ) : (
+                      <QuestionOutlined
+                        style={{ position: "relative", left: 10, top: 1 }}
+                      />
+                    )}
+                    <br />
+                    {file.name}
+                  </Button>
+                </div>
+                {(index + 1) % 3 === 0 ? (
+                  <div
+                    style={{ flexBasis: "100%", height: "0", marginTop: "5%" }}
+                  />
+                ) : (
+                  <></>
+                )}
+              </>
+            ))
+          )}
         </div>
       </div>
 
