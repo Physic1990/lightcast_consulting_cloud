@@ -11,6 +11,7 @@ import {
   Modal,
   Dropdown,
   MenuProps,
+  Popover,
 } from "antd";
 import { useEffect, useState } from "react";
 import { DriveStructureData } from "../types";
@@ -254,7 +255,6 @@ export default function DriveData() {
     file: DriveStructureData
   ) => {
     e.preventDefault();
-    console.log(file.name);
     if (contextMenu) {
       setContextMenu(null);
       setContextPoints(null);
@@ -364,63 +364,61 @@ export default function DriveData() {
                   flex: "1",
                 }}
               >
-                <Button
-                  onClick={() => handleFileSelect(file)}
-                  onContextMenu={(e) => handleFileContext(e, file)}
-                  style={
-                    file.id === selectedFile
-                      ? {
-                          scale: "1.5",
-                          cursor: "pointer",
-                          boxShadow: "none",
-                          backgroundColor: "#4e6fcb",
-                          color: "white",
-                          width: "60%",
-                          overflow: "hidden",
-                          justifyContent: "flex-start",
-                        }
-                      : {
-                          scale: "1.5",
-                          cursor: "pointer",
-                          boxShadow: "none",
-                          backgroundColor: "#f4f4f4",
-                          width: "60%",
-                          overflow: "hidden",
-                          justifyContent: "flex-start",
-                        }
+                <Popover
+                  content={
+                    <div style={{ textAlign: "center" }}>
+                      <Button onClick={(e) => handlePathCopy(e)}>
+                        Copy File Path
+                      </Button>
+                      <br />
+                      <Button onClick={() => setContextMenu(null)}>
+                        Close
+                      </Button>
+                    </div>
                   }
+                  open={contextMenu?.id === file.id}
                 >
-                  {file.type == "folder" ? (
-                    <FolderOutlined style={{ position: "relative", top: 1 }} />
-                  ) : file.type == "file" ? (
-                    <FileOutlined style={{ position: "relative", top: 1 }} />
-                  ) : (
-                    <QuestionOutlined
-                      style={{ position: "relative", left: 10, top: 1 }}
-                    />
-                  )}
-                  <br />
-                  {file.name}
-                </Button>
-                <Modal
-                  open={contextMenu !== null}
-                  footer={null}
-                  maskClosable
-                  mask={true}
-                  onCancel={(e) =>
-                    handleFileContext(e, contextMenu as DriveStructureData)
-                  }
-                  closable={false}
-                  style={{
-                    backdropFilter: "none",
-                    top: contextPoints?.y,
-                    right: contextPoints?.x,
-                  }}
-                >
-                  <Button onClick={(e) => handlePathCopy(e)}>
-                    Copy File Path
+                  <Button
+                    onClick={() => handleFileSelect(file)}
+                    onContextMenu={(e) => handleFileContext(e, file)}
+                    style={
+                      file.id === selectedFile
+                        ? {
+                            scale: "1.5",
+                            cursor: "pointer",
+                            boxShadow: "none",
+                            backgroundColor: "#4e6fcb",
+                            color: "white",
+                            width: "60%",
+                            overflow: "hidden",
+                            justifyContent: "flex-start",
+                          }
+                        : {
+                            scale: "1.5",
+                            cursor: "pointer",
+                            boxShadow: "none",
+                            backgroundColor: "#f4f4f4",
+                            width: "60%",
+                            overflow: "hidden",
+                            justifyContent: "flex-start",
+                          }
+                    }
+                  >
+                    {file.type == "folder" ? (
+                      <FolderOutlined
+                        style={{ position: "relative", top: 1 }}
+                      />
+                    ) : file.type == "file" ? (
+                      <FileOutlined style={{ position: "relative", top: 1 }} />
+                    ) : (
+                      <QuestionOutlined
+                        style={{ position: "relative", left: 10, top: 1 }}
+                      />
+                    )}
+                    <br />
+                    {file.name}
                   </Button>
-                </Modal>
+                </Popover>
               </div>
               {(index + 1) % 3 === 0 ? (
                 <div
