@@ -3,9 +3,18 @@ import {
   FolderOutlined,
   QuestionOutlined,
 } from "@ant-design/icons";
-import { Button, Spin, Alert, Modal } from "antd";
+import {
+  Breadcrumb,
+  Button,
+  Spin,
+  Alert,
+  Modal,
+  Dropdown,
+  MenuProps,
+} from "antd";
 import { useEffect, useState } from "react";
 import { DriveStructureData } from "../types";
+import { ItemType } from "antd/es/breadcrumb/Breadcrumb";
 
 //Create format for processed data object
 interface ProcessedData {
@@ -30,16 +39,30 @@ export default function DriveData() {
   ); // Status Type
   const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
-  const [activeData, setActiveData] = useState<ProcessedData | null>(null);
 
   //Scripts found in the local folder
   const [scripts, setScripts] = useState<string[]>([]);
+
+  //Breadcrumb navigation for Drive files
+  const [breadcrumbs, setBreadcrumbs] = useState<ItemType[]>([
+    { title: "Home" },
+  ]);
 
   //Use to show confirmation modal for actions if not null
   //Modal takes format "(modalName) operation (success ? Successful : Failed)"
   const [confModal, setConfModal] = useState<{
     modalName: string;
     success: boolean;
+  } | null>(null);
+
+  //Use to show context menu for individual files
+  const [contextMenu, setContextMenu] = useState<DriveStructureData | null>(
+    null
+  );
+
+  const [contextPoints, setContextPoints] = useState<{
+    x: number;
+    y: number;
   } | null>(null);
 
   // Function to get Drive data
@@ -81,19 +104,6 @@ export default function DriveData() {
       .catch((error) => console.error("Failed to get Drive data.", error));
   };
 
-  const downloadBlob = (blob: Blob, file_name: string) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    // the filename you want
-    a.download = file_name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  };
-
   // Function to run the model
   const runModel = async (selectedScript: string) => {
     if (!selectedFile) {
@@ -109,7 +119,6 @@ export default function DriveData() {
 
     // Check if the selected file is an Excel file (.xl..?)
     if (!filename_format.test(selectedFileName)) {
-      console.log(selectedFileName);
       setStatus("Only Excel files can be processed.");
       setStatusType("error");
       return;
@@ -152,11 +161,44 @@ export default function DriveData() {
     }
   };
 
+  //Get scripts stored on the local system for display
   const getScripts = async () => {
     await fetch(`${API_URL}/script_folder`)
       .then((response) => response.json())
       .then((response) => setScripts(response))
       .catch((error) => console.error(error));
+  };
+
+  //Set selectPath and reflect it in breadcrumbs
+  const handleSelectPath = (newPath: DriveStructureData[]) => {
+    setSelectPath(newPath);
+
+    var locBreadcrumbs: ItemType[] = [];
+    locBreadcrumbs.push({
+      // title: (
+      //   <Button
+      //     style={{ all: "unset", cursor: "pointer" }}
+      //     onClick={() => rollBackCrumbs("Home")}
+      //   >
+      //     Home
+      //   </Button>
+      // ),
+      title: "Home",
+    });
+    newPath.forEach((element) => {
+      locBreadcrumbs.push({
+        // title: (
+        //   <Button
+        //     style={{ all: "unset", cursor: "pointer" }}
+        //     onClick={() => rollBackCrumbs(element.name)}
+        //   >
+        //     {element.name}
+        //   </Button>
+        // ),
+        title: `${element.name}`,
+      });
+    });
+    setBreadcrumbs(locBreadcrumbs);
   };
 
   useEffect(() => {
@@ -169,7 +211,7 @@ export default function DriveData() {
   const handleFileSelect = (file: DriveStructureData) => {
     if (file.type == "folder") {
       setDriveData(file.contents);
-      setSelectPath([...selectPath, file]);
+      handleSelectPath([...selectPath, file]);
     } else {
       setSelectedFile(file.id);
       setSelectedFileName(file.name);
@@ -182,49 +224,55 @@ export default function DriveData() {
     } else {
       setDriveData(topLevelData);
     }
-    selectPath.pop();
+    handleSelectPath(selectPath.slice(0, selectPath.length - 1));
   };
 
-  const handleDataClose = () => {
-    setActiveData(null);
+  //Exit folders until the correct one (or Home) has been reached; NOT CURRENTLY WORKING, BUTTONS CREATED FOR THIS ARE ONE REFRESH BEHIND
+  const rollBackCrumbs = (targetFolder: string) => {
+    var folderDepth = selectPath.length;
+    var folderName = selectPath[selectPath.length - 1].name.toString();
+
+    for (var i = 0; i < selectPath.length; i += 1) {
+      if (folderDepth == 0 || folderName == targetFolder) {
+        break;
+      }
+      folderDepth -= 1;
+      folderName = selectPath[folderDepth - 1].name.toString();
+    }
+
+    // if (folderDepth > 1) {
+    //   setDriveData(selectPath[folderDepth - 1].contents);
+    // } else {
+    //   setDriveData(topLevelData);
+    // }
+    // handleSelectPath(selectPath.slice(0, folderDepth - 1));
   };
 
-  const handleDataSaveDrive = async () => {
-    console.log(activeData?.hash + " saved to Drive");
-    try {
-      await fetch(`${API_URL}/file_upload`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_name: activeData?.processed_file,
-          mimetype: "application/octet-stream",
-          upload_filename: activeData?.processed_file,
-          resumable: true,
-          chunksize: 262144,
-        }),
-      })
-        .then((response) => response.json())
-        .then((response) =>
-          setConfModal({ modalName: "Drive", success: response })
-        )
-        .catch((error) => console.error(error));
-    } catch (error) {
-      console.error("Error saving file:", error);
+  //Right click handling for file buttons
+  const handleFileContext = (
+    e: React.MouseEvent<HTMLElement>,
+    file: DriveStructureData
+  ) => {
+    e.preventDefault();
+    console.log(file.name);
+    if (contextMenu) {
+      setContextMenu(null);
+      setContextPoints(null);
+    } else {
+      setContextMenu(file);
+      setContextPoints({ x: e.pageX, y: e.pageY });
     }
   };
 
-  const handleDataSaveLocal = async () => {
-    console.log(activeData?.hash + " saved locally");
-    await fetch(
-      `${API_URL}/file_download?file_path=${activeData?.processed_file}`
-    )
-      .then((response) => response.blob())
-      .then((blob) => downloadBlob(blob, activeData?.processed_file as string))
-      .catch((error) => console.error(error));
+  //Allow copying file path from button
+  const handlePathCopy = (e: React.MouseEvent) => {
+    console.log(e.target);
   };
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
+      {/* Breadcrumb navigation bar */}
+      <Breadcrumb items={breadcrumbs} style={{ fontSize: "1.5em" }} />
       <h2>Run Model on Selected File</h2>
 
       {/* Drive Data Section */}
@@ -318,6 +366,7 @@ export default function DriveData() {
               >
                 <Button
                   onClick={() => handleFileSelect(file)}
+                  onContextMenu={(e) => handleFileContext(e, file)}
                   style={
                     file.id === selectedFile
                       ? {
@@ -353,6 +402,25 @@ export default function DriveData() {
                   <br />
                   {file.name}
                 </Button>
+                <Modal
+                  open={contextMenu !== null}
+                  footer={null}
+                  maskClosable
+                  mask={true}
+                  onCancel={(e) =>
+                    handleFileContext(e, contextMenu as DriveStructureData)
+                  }
+                  closable={false}
+                  style={{
+                    backdropFilter: "none",
+                    top: contextPoints?.y,
+                    right: contextPoints?.x,
+                  }}
+                >
+                  <Button onClick={(e) => handlePathCopy(e)}>
+                    Copy File Path
+                  </Button>
+                </Modal>
               </div>
               {(index + 1) % 3 === 0 ? (
                 <div
