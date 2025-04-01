@@ -205,7 +205,8 @@ export default function DriveData() {
   //Exit folders until the correct one (or Home) has been reached; NOT CURRENTLY WORKING, BUTTONS CREATED FOR THIS ARE ONE REFRESH BEHIND
   const rollBackCrumbs = (targetFolder: string) => {
     let folderDepth = selectPath.length;
-    let folderName = selectPath[selectPath.length - 1].name.toString();
+    let folderName =
+      folderDepth > 0 ? selectPath[folderDepth - 1].name.toString() : "Home";
 
     while (folderDepth > 0 && folderName !== targetFolder) {
       folderDepth -= 1;
