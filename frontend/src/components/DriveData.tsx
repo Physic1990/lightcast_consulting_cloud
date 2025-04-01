@@ -1,17 +1,13 @@
 import {
+  CloseOutlined,
   FileOutlined,
   FolderOutlined,
   QuestionOutlined,
 } from "@ant-design/icons";
-import { Button, Spin, Alert, Modal } from "antd";
+import { Breadcrumb, Button, Spin, Alert, Popover } from "antd";
 import { useEffect, useState } from "react";
 import { DriveStructureData } from "../types";
-
-//Create format for processed data object
-interface ProcessedData {
-  processed_file: string; //Store path to processed file on backend
-  hash: string; //Store hash of original file for unique identification
-}
+import { ItemType } from "antd/es/breadcrumb/Breadcrumb";
 
 //Constant for backend request endpoint
 const API_URL = "http://localhost:8000";
@@ -30,17 +26,19 @@ export default function DriveData() {
   ); // Status Type
   const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
-  const [activeData, setActiveData] = useState<ProcessedData | null>(null);
 
   //Scripts found in the local folder
   const [scripts, setScripts] = useState<string[]>([]);
 
-  //Use to show confirmation modal for actions if not null
-  //Modal takes format "(modalName) operation (success ? Successful : Failed)"
-  const [confModal, setConfModal] = useState<{
-    modalName: string;
-    success: boolean;
-  } | null>(null);
+  //Breadcrumb navigation for Drive files
+  const [breadcrumbs, setBreadcrumbs] = useState<ItemType[]>([
+    { title: "Home" },
+  ]);
+
+  //Use to show context menu for individual files
+  const [contextMenu, setContextMenu] = useState<DriveStructureData | null>(
+    null
+  );
 
   // Function to get Drive data
   const getDriveData = async () => {
@@ -81,19 +79,6 @@ export default function DriveData() {
       .catch((error) => console.error("Failed to get Drive data.", error));
   };
 
-  const downloadBlob = (blob: Blob, file_name: string) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    // the filename you want
-    a.download = file_name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  };
-
   // Function to run the model
   const runModel = async (selectedScript: string) => {
     if (!selectedFile) {
@@ -109,7 +94,6 @@ export default function DriveData() {
 
     // Check if the selected file is an Excel file (.xl..?)
     if (!filename_format.test(selectedFileName)) {
-      console.log(selectedFileName);
       setStatus("Only Excel files can be processed.");
       setStatusType("error");
       return;
@@ -152,11 +136,44 @@ export default function DriveData() {
     }
   };
 
+  //Get scripts stored on the local system for display
   const getScripts = async () => {
     await fetch(`${API_URL}/script_folder`)
       .then((response) => response.json())
       .then((response) => setScripts(response))
       .catch((error) => console.error(error));
+  };
+
+  //Set selectPath and reflect it in breadcrumbs
+  const handleSelectPath = (newPath: DriveStructureData[]) => {
+    setSelectPath(newPath);
+
+    const locBreadcrumbs: ItemType[] = [];
+    locBreadcrumbs.push({
+      title: (
+        <Button
+          style={{ all: "unset", cursor: "pointer" }}
+          onClick={() => rollBackCrumbs("Home")}
+        >
+          Home
+        </Button>
+      ),
+      // title: "Home",
+    });
+    newPath.forEach((element) => {
+      locBreadcrumbs.push({
+        title: (
+          <Button
+            style={{ all: "unset", cursor: "pointer" }}
+            onClick={() => rollBackCrumbs(element.name)}
+          >
+            {element.name}
+          </Button>
+        ),
+        // title: `${element.name}`,
+      });
+    });
+    setBreadcrumbs(locBreadcrumbs);
   };
 
   useEffect(() => {
@@ -169,7 +186,7 @@ export default function DriveData() {
   const handleFileSelect = (file: DriveStructureData) => {
     if (file.type == "folder") {
       setDriveData(file.contents);
-      setSelectPath([...selectPath, file]);
+      handleSelectPath([...selectPath, file]);
     } else {
       setSelectedFile(file.id);
       setSelectedFileName(file.name);
@@ -182,49 +199,59 @@ export default function DriveData() {
     } else {
       setDriveData(topLevelData);
     }
-    selectPath.pop();
+    handleSelectPath(selectPath.slice(0, selectPath.length - 1));
   };
 
-  const handleDataClose = () => {
-    setActiveData(null);
-  };
+  //Exit folders until the correct one (or Home) has been reached; NOT CURRENTLY WORKING, BUTTONS CREATED FOR THIS ARE ONE REFRESH BEHIND
+  const rollBackCrumbs = (targetFolder: string) => {
+    let folderDepth = selectPath.length;
+    let folderName = selectPath[selectPath.length - 1].name.toString();
 
-  const handleDataSaveDrive = async () => {
-    console.log(activeData?.hash + " saved to Drive");
-    try {
-      await fetch(`${API_URL}/file_upload`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_name: activeData?.processed_file,
-          mimetype: "application/octet-stream",
-          upload_filename: activeData?.processed_file,
-          resumable: true,
-          chunksize: 262144,
-        }),
-      })
-        .then((response) => response.json())
-        .then((response) =>
-          setConfModal({ modalName: "Drive", success: response })
-        )
-        .catch((error) => console.error(error));
-    } catch (error) {
-      console.error("Error saving file:", error);
+    while (folderDepth > 0 && folderName !== targetFolder) {
+      folderDepth -= 1;
+      console.log(folderDepth);
+      folderName =
+        folderDepth > 0 ? selectPath[folderDepth - 1].name.toString() : "Home";
+      console.log(folderName);
+    }
+
+    if (folderDepth > 0) {
+      setDriveData(selectPath[folderDepth - 1].contents);
+      handleSelectPath(selectPath.slice(0, folderDepth));
+    } else {
+      setDriveData(topLevelData);
+      handleSelectPath([]);
     }
   };
 
-  const handleDataSaveLocal = async () => {
-    console.log(activeData?.hash + " saved locally");
-    await fetch(
-      `${API_URL}/file_download?file_path=${activeData?.processed_file}`
-    )
-      .then((response) => response.blob())
-      .then((blob) => downloadBlob(blob, activeData?.processed_file as string))
-      .catch((error) => console.error(error));
+  //Right click handling for file buttons
+  const handleFileContext = (
+    e: React.MouseEvent<HTMLElement>,
+    file: DriveStructureData
+  ) => {
+    e.preventDefault();
+    if (contextMenu) {
+      setContextMenu(null);
+    } else {
+      setContextMenu(file);
+    }
+  };
+
+  //Allow copying file path from button
+  const handlePathCopy = (fileName: string) => {
+    let prefix = "/";
+    if (selectPath.length > 0) {
+      selectPath.forEach((item) => {
+        prefix = prefix + item.name + "/";
+      });
+    }
+    navigator.clipboard.writeText(prefix + fileName);
   };
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
+      {/* Breadcrumb navigation bar */}
+      <Breadcrumb items={breadcrumbs} style={{ fontSize: "1.5em" }} />
       <h2>Run Model on Selected File</h2>
 
       {/* Drive Data Section */}
@@ -316,43 +343,70 @@ export default function DriveData() {
                   flex: "1",
                 }}
               >
-                <Button
-                  onClick={() => handleFileSelect(file)}
-                  style={
-                    file.id === selectedFile
-                      ? {
-                          scale: "1.5",
+                <Popover
+                  content={
+                    <div style={{ textAlign: "center" }}>
+                      <Button onClick={() => handlePathCopy(file.name)}>
+                        Copy File Path
+                      </Button>
+                      <br />
+                      <Button
+                        style={{
+                          borderStyle: "hidden",
                           cursor: "pointer",
-                          boxShadow: "none",
-                          backgroundColor: "#4e6fcb",
-                          color: "white",
-                          width: "60%",
-                          overflow: "hidden",
-                          justifyContent: "flex-start",
-                        }
-                      : {
-                          scale: "1.5",
-                          cursor: "pointer",
-                          boxShadow: "none",
-                          backgroundColor: "#f4f4f4",
-                          width: "60%",
-                          overflow: "hidden",
-                          justifyContent: "flex-start",
-                        }
+                          padding: "0",
+                          margin: "0",
+                          right: "0",
+                        }}
+                        onClick={() => setContextMenu(null)}
+                      >
+                        <CloseOutlined style={{ margin: "0", right: "0px" }} />
+                      </Button>
+                    </div>
                   }
+                  open={contextMenu?.id === file.id}
                 >
-                  {file.type == "folder" ? (
-                    <FolderOutlined style={{ position: "relative", top: 1 }} />
-                  ) : file.type == "file" ? (
-                    <FileOutlined style={{ position: "relative", top: 1 }} />
-                  ) : (
-                    <QuestionOutlined
-                      style={{ position: "relative", left: 10, top: 1 }}
-                    />
-                  )}
-                  <br />
-                  {file.name}
-                </Button>
+                  <Button
+                    onClick={() => handleFileSelect(file)}
+                    onContextMenu={(e) => handleFileContext(e, file)}
+                    style={
+                      file.id === selectedFile
+                        ? {
+                            scale: "1.5",
+                            cursor: "pointer",
+                            boxShadow: "none",
+                            backgroundColor: "#4e6fcb",
+                            color: "white",
+                            width: "60%",
+                            overflow: "hidden",
+                            justifyContent: "flex-start",
+                          }
+                        : {
+                            scale: "1.5",
+                            cursor: "pointer",
+                            boxShadow: "none",
+                            backgroundColor: "#f4f4f4",
+                            width: "60%",
+                            overflow: "hidden",
+                            justifyContent: "flex-start",
+                          }
+                    }
+                  >
+                    {file.type == "folder" ? (
+                      <FolderOutlined
+                        style={{ position: "relative", top: 1 }}
+                      />
+                    ) : file.type == "file" ? (
+                      <FileOutlined style={{ position: "relative", top: 1 }} />
+                    ) : (
+                      <QuestionOutlined
+                        style={{ position: "relative", left: 10, top: 1 }}
+                      />
+                    )}
+                    <br />
+                    {file.name}
+                  </Button>
+                </Popover>
               </div>
               {(index + 1) % 3 === 0 ? (
                 <div
@@ -384,50 +438,6 @@ export default function DriveData() {
           />
         </div>
       )}
-
-      {/* Modal for data display */}
-      {/* <Modal
-        open={activeData !== null}
-        onOk={handleDataSaveLocal}
-        onCancel={handleDataClose}
-        maskClosable
-        footer={[]}
-      > */}
-      {/* Show processed data - must update with actual visualization */}
-      {/* <h2>Processed Data</h2>
-        <p>Path: {activeData?.processed_file}</p>
-        <p>Hash: {activeData?.hash}</p>
-        <script
-          src="https://apis.google.com/js/platform.js"
-          async
-          defer
-        ></script>
-        <Button
-          className="g-savetodrive"
-          key="saveToDrive"
-          type="primary"
-          onClick={handleDataSaveDrive}
-        >
-          Save to Drive
-        </Button>
-        <Button key="saveLocal" type="primary" onClick={handleDataSaveLocal}>
-          Save Locally
-        </Button>
-      </Modal> */}
-
-      {/* Modal for event notification */}
-      <Modal
-        open={confModal !== null}
-        onOk={() => setConfModal(null)}
-        onCancel={() => setConfModal(null)}
-        maskClosable
-        footer={[]}
-      >
-        <h2>
-          {confModal?.modalName} Operation{" "}
-          {confModal?.success ? "Successful" : "Failed"}
-        </h2>
-      </Modal>
     </div>
   );
 }
