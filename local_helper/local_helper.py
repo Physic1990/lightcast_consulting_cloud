@@ -67,12 +67,12 @@ def process_excel_file(run_script: str):
     data_selected = (os.path.getsize(DATA_STORAGE) > 0)
     model_selected = (os.path.getsize(MODEL_STORAGE) > 0)
     if not(data_selected and model_selected):
-        update_terminal_log("Must select data and then model.")
+        update_terminal_log_colored_parts("Error: ", "Must select data and then model.", "red")
         return
 
     #Check that the active data exists
     if(not os.path.exists(active_data)):
-        update_terminal_log(f"{active_data} does not exist on the local system.")
+        update_terminal_log_colored_parts("Error: ", f"{active_data} does not exist on the local system.", "red")
         return
 
     try:
@@ -82,7 +82,7 @@ def process_excel_file(run_script: str):
         with open(MODEL_STORAGE, 'rb+') as file:
             python_model = os.path.join(pickle.load(file), run_script)
 
-        update_terminal_log_colored_parts(f"Running model: " ,run_script, "red")
+        update_terminal_log_colored_parts(f"Running model: " ,run_script, "#1BE72F")
         update_terminal_log_colored_parts(f"Processing started for: ",active_data,"orange")
 
         #Run the model.py subprocess on active_data
@@ -99,8 +99,9 @@ def process_excel_file(run_script: str):
         return {"processed_file": active_data}
 
     except Exception as e:
-        update_terminal_log(f"Error processing Excel file: {str(e)}")
-        return {"error": f"Failed to process file: {str(e)}"}
+        error_message = f"Error processing Excel file: {str(e)}"
+        update_terminal_log_colored_parts("Error: ", error_message, "red")
+        return {"error": error_message}
 
 # Function to process files of different types
 def run_model(file_path, model_name):
@@ -118,7 +119,7 @@ def run_model(file_path, model_name):
         return {"processed_file": file_path}
     else:
         active_data = None
-        update_terminal_log(f"Unsupported file type: {file_extension}")
+        update_terminal_log_colored_parts("Error: ", f"Unsupported file type: {file_extension}", "red")
         return {"error": f"Unsupported file type: {file_extension}"}
 
 # API route to receive file uploads
@@ -132,9 +133,9 @@ def upload_file():
     response = run_model(os.path.join("local_data", file_path), py_script)
 
     if "error" in response:
-        update_terminal_log(f"Error: {response['error']}")
-        return jsonify({"error": "Something went wrong in file delivery."})
-
+        update_terminal_log_colored_parts("Error: ", response["error"], "red")
+        return jsonify({"error": response["error"]})
+    
     return jsonify({"success": "File delivered."})
 
 @app.route("/scripts-folder", methods=["GET"])
