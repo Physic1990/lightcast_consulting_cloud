@@ -1,27 +1,13 @@
 import {
+  CloseOutlined,
   FileOutlined,
   FolderOutlined,
   QuestionOutlined,
 } from "@ant-design/icons";
-import {
-  Breadcrumb,
-  Button,
-  Spin,
-  Alert,
-  Modal,
-  Dropdown,
-  MenuProps,
-  Popover,
-} from "antd";
+import { Breadcrumb, Button, Spin, Alert, Popover } from "antd";
 import { useEffect, useState } from "react";
 import { DriveStructureData } from "../types";
 import { ItemType } from "antd/es/breadcrumb/Breadcrumb";
-
-//Create format for processed data object
-interface ProcessedData {
-  processed_file: string; //Store path to processed file on backend
-  hash: string; //Store hash of original file for unique identification
-}
 
 //Constant for backend request endpoint
 const API_URL = "http://localhost:8000";
@@ -49,22 +35,10 @@ export default function DriveData() {
     { title: "Home" },
   ]);
 
-  //Use to show confirmation modal for actions if not null
-  //Modal takes format "(modalName) operation (success ? Successful : Failed)"
-  const [confModal, setConfModal] = useState<{
-    modalName: string;
-    success: boolean;
-  } | null>(null);
-
   //Use to show context menu for individual files
   const [contextMenu, setContextMenu] = useState<DriveStructureData | null>(
     null
   );
-
-  const [contextPoints, setContextPoints] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
 
   // Function to get Drive data
   const getDriveData = async () => {
@@ -174,29 +148,29 @@ export default function DriveData() {
   const handleSelectPath = (newPath: DriveStructureData[]) => {
     setSelectPath(newPath);
 
-    var locBreadcrumbs: ItemType[] = [];
+    const locBreadcrumbs: ItemType[] = [];
     locBreadcrumbs.push({
-      // title: (
-      //   <Button
-      //     style={{ all: "unset", cursor: "pointer" }}
-      //     onClick={() => rollBackCrumbs("Home")}
-      //   >
-      //     Home
-      //   </Button>
-      // ),
-      title: "Home",
+      title: (
+        <Button
+          style={{ all: "unset", cursor: "pointer" }}
+          onClick={() => rollBackCrumbs("Home")}
+        >
+          Home
+        </Button>
+      ),
+      // title: "Home",
     });
     newPath.forEach((element) => {
       locBreadcrumbs.push({
-        // title: (
-        //   <Button
-        //     style={{ all: "unset", cursor: "pointer" }}
-        //     onClick={() => rollBackCrumbs(element.name)}
-        //   >
-        //     {element.name}
-        //   </Button>
-        // ),
-        title: `${element.name}`,
+        title: (
+          <Button
+            style={{ all: "unset", cursor: "pointer" }}
+            onClick={() => rollBackCrumbs(element.name)}
+          >
+            {element.name}
+          </Button>
+        ),
+        // title: `${element.name}`,
       });
     });
     setBreadcrumbs(locBreadcrumbs);
@@ -230,23 +204,24 @@ export default function DriveData() {
 
   //Exit folders until the correct one (or Home) has been reached; NOT CURRENTLY WORKING, BUTTONS CREATED FOR THIS ARE ONE REFRESH BEHIND
   const rollBackCrumbs = (targetFolder: string) => {
-    var folderDepth = selectPath.length;
-    var folderName = selectPath[selectPath.length - 1].name.toString();
+    let folderDepth = selectPath.length;
+    let folderName = selectPath[selectPath.length - 1].name.toString();
 
-    for (var i = 0; i < selectPath.length; i += 1) {
-      if (folderDepth == 0 || folderName == targetFolder) {
-        break;
-      }
+    while (folderDepth > 0 && folderName !== targetFolder) {
       folderDepth -= 1;
-      folderName = selectPath[folderDepth - 1].name.toString();
+      console.log(folderDepth);
+      folderName =
+        folderDepth > 0 ? selectPath[folderDepth - 1].name.toString() : "Home";
+      console.log(folderName);
     }
 
-    // if (folderDepth > 1) {
-    //   setDriveData(selectPath[folderDepth - 1].contents);
-    // } else {
-    //   setDriveData(topLevelData);
-    // }
-    // handleSelectPath(selectPath.slice(0, folderDepth - 1));
+    if (folderDepth > 0) {
+      setDriveData(selectPath[folderDepth - 1].contents);
+      handleSelectPath(selectPath.slice(0, folderDepth));
+    } else {
+      setDriveData(topLevelData);
+      handleSelectPath([]);
+    }
   };
 
   //Right click handling for file buttons
@@ -257,16 +232,20 @@ export default function DriveData() {
     e.preventDefault();
     if (contextMenu) {
       setContextMenu(null);
-      setContextPoints(null);
     } else {
       setContextMenu(file);
-      setContextPoints({ x: e.pageX, y: e.pageY });
     }
   };
 
   //Allow copying file path from button
-  const handlePathCopy = (e: React.MouseEvent) => {
-    console.log(e.target);
+  const handlePathCopy = (fileName: string) => {
+    let prefix = "/";
+    if (selectPath.length > 0) {
+      selectPath.forEach((item) => {
+        prefix = prefix + item.name + "/";
+      });
+    }
+    navigator.clipboard.writeText(prefix + fileName);
   };
 
   return (
@@ -367,12 +346,21 @@ export default function DriveData() {
                 <Popover
                   content={
                     <div style={{ textAlign: "center" }}>
-                      <Button onClick={(e) => handlePathCopy(e)}>
+                      <Button onClick={() => handlePathCopy(file.name)}>
                         Copy File Path
                       </Button>
                       <br />
-                      <Button onClick={() => setContextMenu(null)}>
-                        Close
+                      <Button
+                        style={{
+                          borderStyle: "hidden",
+                          cursor: "pointer",
+                          padding: "0",
+                          margin: "0",
+                          right: "0",
+                        }}
+                        onClick={() => setContextMenu(null)}
+                      >
+                        <CloseOutlined style={{ margin: "0", right: "0px" }} />
                       </Button>
                     </div>
                   }
@@ -450,50 +438,6 @@ export default function DriveData() {
           />
         </div>
       )}
-
-      {/* Modal for data display */}
-      {/* <Modal
-        open={activeData !== null}
-        onOk={handleDataSaveLocal}
-        onCancel={handleDataClose}
-        maskClosable
-        footer={[]}
-      > */}
-      {/* Show processed data - must update with actual visualization */}
-      {/* <h2>Processed Data</h2>
-        <p>Path: {activeData?.processed_file}</p>
-        <p>Hash: {activeData?.hash}</p>
-        <script
-          src="https://apis.google.com/js/platform.js"
-          async
-          defer
-        ></script>
-        <Button
-          className="g-savetodrive"
-          key="saveToDrive"
-          type="primary"
-          onClick={handleDataSaveDrive}
-        >
-          Save to Drive
-        </Button>
-        <Button key="saveLocal" type="primary" onClick={handleDataSaveLocal}>
-          Save Locally
-        </Button>
-      </Modal> */}
-
-      {/* Modal for event notification */}
-      <Modal
-        open={confModal !== null}
-        onOk={() => setConfModal(null)}
-        onCancel={() => setConfModal(null)}
-        maskClosable
-        footer={[]}
-      >
-        <h2>
-          {confModal?.modalName} Operation{" "}
-          {confModal?.success ? "Successful" : "Failed"}
-        </h2>
-      </Modal>
     </div>
   );
 }
