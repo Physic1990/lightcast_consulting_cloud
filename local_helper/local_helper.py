@@ -23,17 +23,26 @@ MODEL_STORAGE = os.path.join('pickles','model_pickle')
 #Where is the selected data pickled?
 DATA_STORAGE = os.path.join('pickles', 'data_pickle')
 
+def update_terminal_log_colored_parts(prefix: str, colored_part: str, color: str = "green", suffix: str = ""):
+    terminal.insert(tk.END, prefix)
+    terminal.insert(tk.END, colored_part, color)
+    if suffix:
+        terminal.insert(tk.END, suffix)
+    terminal.insert(tk.END, "\n")
+    terminal.tag_config(color, foreground=color)
+    terminal.see(tk.END)
+
 #Open file explorer to select model
 def open_file_explorer_request():
     selected_folder = filedialog.askdirectory(initialdir=(os.getcwd()), title="Select a Folder", )
 
-    if(selected_folder):
-        update_terminal_log(f"Selected Python script folder {selected_folder}")
+    if selected_folder:
+        update_terminal_log_colored_parts("Selected Python script folder: ", selected_folder + "\n", "green")
         with open(MODEL_STORAGE, 'wb+') as file:
             pickle.dump(selected_folder, file)
     else:
-        update_terminal_log(f"No valid folder selected.")
-        return
+        update_terminal_log("No valid folder selected.")
+
 
 #Cleanup for when local helper is closed
 def on_closing():
@@ -68,10 +77,13 @@ def process_excel_file(run_script: str):
 
     try:
         start_time = time.time()
-        update_terminal_log(f"Processing started for: {active_data}")
+        #update_terminal_log(f"Processing started for: {active_data}")
 
         with open(MODEL_STORAGE, 'rb+') as file:
             python_model = os.path.join(pickle.load(file), run_script)
+
+        update_terminal_log_colored_parts(f"Running model: " ,run_script, "red")
+        update_terminal_log_colored_parts(f"Processing started for: ",active_data,"orange")
 
         #Run the model.py subprocess on active_data
         subprocess.run(["python", python_model, active_data], capture_output=True, text=True)
@@ -81,7 +93,8 @@ def process_excel_file(run_script: str):
         # update_terminal_log(results.stderr)
 
         end_time = time.time()
-        update_terminal_log(f"Total processing time: {end_time - start_time:.2f} seconds")
+        elapsed_time = f"{end_time - start_time:.2f}"
+        update_terminal_log_colored_parts("Total processing time: ", elapsed_time, "yellow", " seconds" + "\n")
 
         return {"processed_file": active_data}
 
@@ -114,7 +127,7 @@ def upload_file():
     file_path = request.json['file']
     py_script = request.json['script']
 
-    update_terminal_log(f"Received file for processing: {file_path}")
+    update_terminal_log_colored_parts(f"Received file for processing: " ,file_path ,"yellow")
 
     response = run_model(os.path.join("local_data", file_path), py_script)
 
@@ -158,7 +171,7 @@ def start_gui():
     relief="flat"
     )
 
-    terminal.pack()
+    terminal.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
     def on_enter(e):
         models_button['background'] = '#005f99'  # Slightly darker blue on hover
