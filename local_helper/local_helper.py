@@ -7,6 +7,7 @@ import time
 import pandas as pd
 import tkinter as tk
 from tkinter import scrolledtext, filedialog
+import tkinter.font as tkFont 
 import threading
 from flask import Flask, jsonify, request
 
@@ -34,14 +35,27 @@ def update_terminal_log_colored_parts(prefix: str, colored_part: str, color: str
 
 #Open file explorer to select model
 def open_file_explorer_request():
-    selected_folder = filedialog.askdirectory(initialdir=(os.getcwd()), title="Select a Folder", )
+    terminal.delete("1.0", tk.END)  # Clear terminal
+
+    selected_folder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select a Folder")
 
     if selected_folder:
-        update_terminal_log_colored_parts("Selected Python script folder: ", selected_folder + "\n", "green")
+        update_terminal_log_colored_parts("Selected Python script folder: ", selected_folder , "green")
+        
+        # Save folder path in pickle
         with open(MODEL_STORAGE, 'wb+') as file:
             pickle.dump(selected_folder, file)
+
+        # List and show .py files in sky blue
+        py_files = [f for f in os.listdir(selected_folder) if f.endswith(".py")]
+        if py_files:
+            update_terminal_log_colored_parts("Python scripts found:", "", "cyan")
+            for script in py_files:
+                update_terminal_log_colored_parts("  → ", script, "skyblue")
+        else:
+            update_terminal_log_colored_parts("Error: ", "No Python (.py) files found in the folder.", "red")
     else:
-        update_terminal_log("No valid folder selected.")
+        update_terminal_log_colored_parts("Error: ", "No valid folder selected.", "red")
 
 
 #Cleanup for when local helper is closed
@@ -128,7 +142,7 @@ def upload_file():
     file_path = request.json['file']
     py_script = request.json['script']
 
-    update_terminal_log_colored_parts(f"Received file for processing: " ,file_path ,"yellow")
+    update_terminal_log_colored_parts(f"\nReceived file for processing: " ,file_path ,"yellow")
 
     response = run_model(os.path.join("local_data", file_path), py_script)
 
@@ -141,13 +155,16 @@ def upload_file():
 @app.route("/scripts-folder", methods=["GET"])
 def get_scripts_folder():
     #Make sure the folder is selected
-    if(os.path.getsize(MODEL_STORAGE) <= 0):
+    if os.path.getsize(MODEL_STORAGE) <= 0:
+        update_terminal_log_colored_parts("Error: ", "No script folder selected.", "red")
         return {"error": "No script folder selected."}
     
     with open(MODEL_STORAGE, "rb+") as file:
         scripts_folder = pickle.load(file)
     
-    return os.listdir(scripts_folder) 
+    # Filter only .py files
+    python_scripts = [f for f in os.listdir(scripts_folder) if f.endswith(".py")]
+    return jsonify(python_scripts)
 
 # Start Flask API in a separate thread
 def start_flask():
@@ -174,6 +191,14 @@ def start_gui():
 
     terminal.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
+    # Vertically center message
+    terminal.insert(tk.END, "\n" * 10)
+
+    # Horizontally center message
+    large_font = tkFont.Font(family="Consolas", size=16, weight="bold")
+    terminal.tag_config("center", justify="center", font=large_font)
+    terminal.insert(tk.END, "Select a Python script folder below.", "center")
+
     def on_enter(e):
         models_button['background'] = '#005f99'  # Slightly darker blue on hover
 
@@ -198,6 +223,12 @@ def start_gui():
     models_button.bind("<Leave>", on_leave)
 
     models_button.pack(pady=10)  # Packs in center with padding
+    terminal.tag_config("green", foreground="green")
+    terminal.tag_config("yellow", foreground="yellow")
+    terminal.tag_config("orange", foreground="orange")
+    terminal.tag_config("red", foreground="red")
+    terminal.tag_config("cyan", foreground="cyan")
+    terminal.tag_config("skyblue", foreground="skyblue")
 
     root.mainloop()
 
