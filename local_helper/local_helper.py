@@ -143,11 +143,47 @@ def start_flask():
 def start_gui():
     global terminal
 
-    terminal = scrolledtext.ScrolledText(root, width=80, height=20, wrap=tk.WORD)
+    terminal = scrolledtext.ScrolledText(
+    root,
+    width=80,
+    height=20,
+    wrap=tk.WORD,
+    bg="#1e1e1e",            # Dark background
+    fg="#d4d4d4",            # Light gray text
+    insertbackground="#ffffff",  # White cursor
+    font=("Consolas", 12),   # Monospaced modern font
+    padx=10,
+    pady=10,
+    borderwidth=0,
+    relief="flat"
+    )
+
     terminal.pack()
 
-    models_button = tk.Button(root, text="Select Model Folder", command=open_file_explorer_request)
-    models_button.pack(side=tk.RIGHT)
+    def on_enter(e):
+        models_button['background'] = '#005f99'  # Slightly darker blue on hover
+
+    def on_leave(e):
+        models_button['background'] = '#007acc'  # Default blue
+
+    models_button = tk.Button(
+        root,
+        text="Select Model Folder",
+        command=open_file_explorer_request,
+        bg="#007acc",                 # Button background
+        fg="black",                   # Text color
+        highlightbackground="#007acc",  # Force bg color on macOS
+        font=("Segoe UI", 10, "bold"),
+        padx=14,
+        pady=6,
+        borderwidth=0,
+        relief="flat"
+    )
+
+    models_button.bind("<Enter>", on_enter)
+    models_button.bind("<Leave>", on_leave)
+
+    models_button.pack(pady=10)  # Packs in center with padding
 
     root.mainloop()
 
