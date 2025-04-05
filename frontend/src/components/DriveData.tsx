@@ -182,7 +182,9 @@ export default function DriveData() {
 
   //Run through login flow
   const loginFlow = async () => {
-    await fetch(`${API_URL}/auth/login`)
+    await fetch(`${API_URL}/auth/login`, {
+        credentials: "include"
+  })
       .then((response) => response.json())
       .then((response) => window.open(response["authorization_url"]))
       .catch((error) => console.error(error));

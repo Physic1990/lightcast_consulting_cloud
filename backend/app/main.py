@@ -17,8 +17,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
-    "https://localhost:3000",
-    "localhost:3000"
+    "https://localhost:3000"
 ]
 
 # OAuth2 configuration
