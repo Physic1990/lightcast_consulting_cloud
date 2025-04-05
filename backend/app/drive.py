@@ -3,7 +3,6 @@ import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaFileUpload
-from os import stat
 from . import credential_handler
 import pandas as pd
 from fastapi import HTTPException

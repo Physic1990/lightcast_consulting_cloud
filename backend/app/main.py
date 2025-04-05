@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.security import OAuth2AuthorizationCodeBearer
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -11,7 +10,6 @@ import requests
 import os
 from . import credential_handler
 from . import drive
-import hashlib
 
 app = FastAPI()
 
