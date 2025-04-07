@@ -8,7 +8,7 @@ connection and interacts with the local helper.
 
 ## File Structure
 
-app/main.py: FastAPI app with web handlers, the OAuth authentication system, and part of the credential handling.
+app/application.py: FastAPI app with web handlers, the OAuth authentication system, and part of the credential handling.
 app/drive.py: Google Drive API interaction functions as well as local helper file processing functions.
 app/credential_handler.py: Authentication credential management.
 app/creds.json: OAuth 2.0 client credentials.
@@ -31,7 +31,7 @@ app/creds.json: OAuth 2.0 client credentials.
 After environment is setup and dependencies installed, run in backend directory by:
 
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.application:app --reload
 ```
 
 The backend will be available at http://localhost:8000.

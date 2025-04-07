@@ -9,8 +9,10 @@ import json
 from typing import Union
 import requests
 import os
-from . import credential_handler
-from . import drive
+from . import credential_handler # DELETE during AWS deployment
+from . import drive # DELETE during AWS deployment
+#from credential_handler import *
+#from drive import *
 
 # Initialize FastAPI application
 app = FastAPI()
