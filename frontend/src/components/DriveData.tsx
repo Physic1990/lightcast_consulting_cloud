@@ -27,6 +27,9 @@ export default function DriveData() {
   const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
 
+  //Authentication failed; show login button
+  const [authError, setAuthError] = useState(false);
+
   //Scripts found in the local folder
   const [scripts, setScripts] = useState<string[]>([]);
 
@@ -42,12 +45,20 @@ export default function DriveData() {
 
   // Function to get Drive data
   const getDriveData = async () => {
-    await fetch(`${API_URL}/drive_structure`)
+    await fetch(`${API_URL}/drive_structure`, {
+      credentials: "include",
+    })
       .then((response) => response.json())
       .then((response) => {
         const newData: DriveStructureData[] = [];
         let prevIndent: number = 0;
         const folderLoc = [];
+
+        if ("detail" in response && response["detail"] == "Not authenticated") {
+          console.error("Could not retrieve Drive data, unauthenticated.");
+          setAuthError(true);
+          return;
+        }
 
         for (let i = 0; i < response.length; i++) {
           response[i].contents = [];
@@ -109,6 +120,7 @@ export default function DriveData() {
     try {
       const response = await fetch(`${API_URL}/run-local-model`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: selectedFile, script: selectedScript }),
       });
@@ -138,7 +150,9 @@ export default function DriveData() {
 
   //Get scripts stored on the local system for display
   const getScripts = async () => {
-    await fetch(`${API_URL}/script_folder`)
+    await fetch(`${API_URL}/script_folder`, {
+      credentials: "include",
+    })
       .then((response) => response.json())
       .then((response) => setScripts(response))
       .catch((error) => console.error(error));
@@ -200,6 +214,16 @@ export default function DriveData() {
       setDriveData(topLevelData);
     }
     handleSelectPath(selectPath.slice(0, selectPath.length - 1));
+  };
+
+  //Run through login flow
+  const loginFlow = async () => {
+    await fetch(`${API_URL}/auth/login`, {
+      credentials: "include",
+    })
+      .then((response) => response.json())
+      .then((response) => window.open(response["authorization_url"]))
+      .catch((error) => console.error(error));
   };
 
   //Exit folders until the correct one (or Home) has been reached; NOT CURRENTLY WORKING, BUTTONS CREATED FOR THIS ARE ONE REFRESH BEHIND
@@ -334,90 +358,105 @@ export default function DriveData() {
           ) : (
             <></>
           )}
-          {driveData?.map((file, index) => (
-            <>
-              <div
-                key={file.id}
-                style={{
-                  marginLeft: "5%",
-                  height: "100%",
-                  flex: "1",
-                }}
-              >
-                <Popover
-                  content={
-                    <div style={{ textAlign: "center" }}>
-                      <Button onClick={() => handlePathCopy(file.name)}>
-                        Copy File Path
-                      </Button>
-                      <br />
-                      <Button
-                        style={{
-                          borderStyle: "hidden",
-                          cursor: "pointer",
-                          padding: "0",
-                          margin: "0",
-                          right: "0",
-                        }}
-                        onClick={() => setContextMenu(null)}
-                      >
-                        <CloseOutlined style={{ margin: "0", right: "0px" }} />
-                      </Button>
-                    </div>
-                  }
-                  open={contextMenu?.id === file.id}
-                >
-                  <Button
-                    onClick={() => handleFileSelect(file)}
-                    onContextMenu={(e) => handleFileContext(e, file)}
-                    style={
-                      file.id === selectedFile
-                        ? {
-                            scale: "1.5",
-                            cursor: "pointer",
-                            boxShadow: "none",
-                            backgroundColor: "#4e6fcb",
-                            color: "white",
-                            width: "60%",
-                            overflow: "hidden",
-                            justifyContent: "flex-start",
-                          }
-                        : {
-                            scale: "1.5",
-                            cursor: "pointer",
-                            boxShadow: "none",
-                            backgroundColor: "#f4f4f4",
-                            width: "60%",
-                            overflow: "hidden",
-                            justifyContent: "flex-start",
-                          }
-                    }
-                  >
-                    {file.type == "folder" ? (
-                      <FolderOutlined
-                        style={{ position: "relative", top: 1 }}
-                      />
-                    ) : file.type == "file" ? (
-                      <FileOutlined style={{ position: "relative", top: 1 }} />
-                    ) : (
-                      <QuestionOutlined
-                        style={{ position: "relative", left: 10, top: 1 }}
-                      />
-                    )}
-                    <br />
-                    {file.name}
-                  </Button>
-                </Popover>
-              </div>
-              {(index + 1) % 3 === 0 ? (
+          {authError ? (
+            <div style={{ flex: "1" }}>
+              {/* Bit obnoxious for now, should be changed */}
+              <p>Please</p>
+              <Button style={{ scale: "2" }} type="primary" onClick={loginFlow}>
+                Log In
+              </Button>
+              <p>to continue!</p>
+            </div>
+          ) : (
+            driveData?.map((file, index) => (
+              <>
                 <div
-                  style={{ flexBasis: "100%", height: "0", marginTop: "5%" }}
-                />
-              ) : (
-                <></>
-              )}
-            </>
-          ))}
+                  key={file.id}
+                  style={{
+                    marginLeft: "5%",
+                    height: "100%",
+                    flex: "1",
+                  }}
+                >
+                  <Popover
+                    content={
+                      <div style={{ textAlign: "center" }}>
+                        <Button onClick={() => handlePathCopy(file.name)}>
+                          Copy File Path
+                        </Button>
+                        <br />
+                        <Button
+                          style={{
+                            borderStyle: "hidden",
+                            cursor: "pointer",
+                            padding: "0",
+                            margin: "0",
+                            right: "0",
+                          }}
+                          onClick={() => setContextMenu(null)}
+                        >
+                          <CloseOutlined
+                            style={{ margin: "0", right: "0px" }}
+                          />
+                        </Button>
+                      </div>
+                    }
+                    open={contextMenu?.id === file.id}
+                  >
+                    <Button
+                      onClick={() => handleFileSelect(file)}
+                      onContextMenu={(e) => handleFileContext(e, file)}
+                      style={
+                        file.id === selectedFile
+                          ? {
+                              scale: "1.5",
+                              cursor: "pointer",
+                              boxShadow: "none",
+                              backgroundColor: "#4e6fcb",
+                              color: "white",
+                              width: "60%",
+                              overflow: "hidden",
+                              justifyContent: "flex-start",
+                            }
+                          : {
+                              scale: "1.5",
+                              cursor: "pointer",
+                              boxShadow: "none",
+                              backgroundColor: "#f4f4f4",
+                              width: "60%",
+                              overflow: "hidden",
+                              justifyContent: "flex-start",
+                            }
+                      }
+                    >
+                      {file.type == "folder" ? (
+                        <FolderOutlined
+                          style={{ position: "relative", top: 1 }}
+                        />
+                      ) : file.type == "file" ? (
+                        <FileOutlined
+                          style={{ position: "relative", top: 1 }}
+                        />
+                      ) : (
+                        <QuestionOutlined
+                          style={{ position: "relative", left: 10, top: 1 }}
+                        />
+                      )}
+                      <br />
+                      {file.name}
+                    </Button>
+                  </Popover>
+                </div>
+                {(index + 1) % 3 === 0 ? (
+                  <div
+                    style={{ flexBasis: "100%", height: "0", marginTop: "5%" }}
+                  />
+                ) : (
+                  <></>
+                )}
+              </>
+            ))
+          )}
         </div>
       </div>
 

@@ -23,7 +23,7 @@ cd lightcast_consulting_cloud
 
 Start the Local Helper inside local_helper folder: python3 local_helper.py
 
-Run the backend inside backend folder with virtual env: uvicorn app.main:app --reload
+Run the backend inside backend folder with virtual env: uvicorn app.application:app --reload
 
 Start the frontend inside frontend folder: yarn dev (or npm run dev)
 
@@ -49,8 +49,9 @@ lightcast_env\Scripts\activate  # (Windows)
 Install dependencies
 
 ```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+pip install -r app/requirements.txt # (Mac/Linux)
+pip install -r app\requirements.txt # (Windows cmd)
+uvicorn app.application:app --reload
 ```
 The backend will be available at http://localhost:8000.
 

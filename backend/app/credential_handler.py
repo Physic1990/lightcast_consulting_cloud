@@ -1,39 +1,45 @@
-#import os
+# Import modules and packages
 import os.path
-import sys
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from fastapi import HTTPException
 
+# OAuth Scopes for Google Drive
 SCOPES = ["https://www.googleapis.com/auth/drive.file",
           "https://www.googleapis.com/auth/docs",
           "https://www.googleapis.com/auth/drive",
           "https://www.googleapis.com/auth/drive.metadata.readonly"]
 
-def request_creds():
-    creds = None
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    creds_path = os.path.join(script_dir, "creds.json")
-    token_path = os.path.join(script_dir, "token.json")
+# New session based implementation
+def get_creds(session = None):
+    """
+    Retrieves Google OAuth2 credentials from session storage or token file if no session.
+    
+    Parameters: session from the request, defaults to None.
+    Raises: HTTPException if user is not authenticated and no valid credentials are found.
+    Returns: Google credentials object.
+    """     
+    if session is None:
+        # If no session is provided, fall back to the previous token.json method
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        token_path = os.path.join(script_dir, "token.json")
 
-    if os.path.exists(creds_path):
-        flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
-        creds = flow.run_local_server(port = 0)
-        with open(token_path, "w") as token:
-            token.write(creds.to_json())
-        return Credentials.from_authorized_user_file(token_path, SCOPES)   
+        if os.path.exists(token_path):
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            return creds
     else:
-        #print("Current working directory:", os.getcwd())
-        print("Credentials are not present")
-        sys.exit(1)
-
-def get_creds():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    token_path = os.path.join(script_dir, "token.json")
-
-    if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-        if creds and creds.expired and creds.refresh_token:
+        # Use the session-based method
+        creds_data = session.get("credentials")
+        if not creds_data:
+            raise HTTPException(status_code = 401, detail = "Not authenticated")
+        
+        creds = Credentials.from_authorized_user_info(eval(creds_data), SCOPES) # send json as a dictionary and scopes to get creds
+        
+        if creds and creds.expired and creds.refresh_token: # if credentials expired, refresh
             creds.refresh(Request())
+            session["credentials"] = creds.to_json() # update passed in session with new credentials
+        
         return creds
-    return request_creds()
