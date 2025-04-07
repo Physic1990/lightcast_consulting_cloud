@@ -46,7 +46,9 @@ export default function DriveData() {
 
   // Function to get Drive data
   const getDriveData = async () => {
-    await fetch(`${API_URL}/drive_structure`)
+    await fetch(`${API_URL}/drive_structure`, {
+      credentials: "include",
+    })
       .then((response) => response.json())
       .then((response) => {
         const newData: DriveStructureData[] = [];
@@ -120,6 +122,7 @@ export default function DriveData() {
     try {
       const response = await fetch(`${API_URL}/run-local-model`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: selectedFile, script: selectedScript }),
       });
@@ -148,7 +151,9 @@ export default function DriveData() {
   };
 
   const getScripts = async () => {
-    await fetch(`${API_URL}/script_folder`)
+    await fetch(`${API_URL}/script_folder`, {
+      credentials: "include",
+    })
       .then((response) => response.json())
       .then((response) => setScripts(response))
       .catch((error) => console.error(error));
@@ -183,8 +188,8 @@ export default function DriveData() {
   //Run through login flow
   const loginFlow = async () => {
     await fetch(`${API_URL}/auth/login`, {
-        credentials: "include"
-  })
+      credentials: "include",
+    })
       .then((response) => response.json())
       .then((response) => window.open(response["authorization_url"]))
       .catch((error) => console.error(error));

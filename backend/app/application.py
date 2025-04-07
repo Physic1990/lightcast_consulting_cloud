@@ -220,14 +220,15 @@ logging.basicConfig(level=logging.DEBUG)
 LOCAL_HELPER_URL = "http://127.0.0.1:9000"
 
 @app.post("/run-local-model")
-async def run_local_model(data: dict):
+async def run_local_model(request: Request, data: dict):
     file_id = data.get("file_id")
     script = data.get('script')
+    creds = credential_handler.get_creds(request.session)
     if not file_id or not script:
         raise HTTPException(status_code=400, detail="File ID and script selection are required.")
 
     try:
-        file_path = drive.download_file(file_id)
+        file_path = drive.download_file(file_id, creds=creds)
         if not file_path or not os.path.exists(file_path):
             raise HTTPException(status_code=500, detail="Failed to download file.")
 
