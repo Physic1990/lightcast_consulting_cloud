@@ -1,3 +1,4 @@
+# Import modules and packages
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,8 +12,10 @@ import os
 from . import credential_handler
 from . import drive
 
+# Initialize FastAPI application
 app = FastAPI()
 
+# Configure CORS to allow requests from frontend
 origins = [
     "http://localhost:3000",
     "https://localhost:3000"
@@ -21,11 +24,13 @@ origins = [
 # OAuth2 configuration
 REDIRECT_URI = "http://localhost:8000/auth/callback"
 
+# OAuth scopes for Google Drive
 SCOPES = ["https://www.googleapis.com/auth/drive.file",
           "https://www.googleapis.com/auth/docs",
           "https://www.googleapis.com/auth/drive",
           "https://www.googleapis.com/auth/drive.metadata.readonly"]
 
+# CORS middleware handles cross-origin requests from the frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -34,12 +39,12 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Session middleware
+# Session middleware stores authentication state and credentials 
 app.add_middleware(
     SessionMiddleware,
-    secret_key = "XA99wx1rfjygvR4qAvt3Kb9uqYkKrWabpZXQ16oGdoaQYqmQWRdcWZhDftdshXSh", # Change as desired and add as environment variable
+    secret_key = "XA99wx1rfjygvR4qAvt3Kb9uqYkKrWabpZXQ16oGdoaQYqmQWRdcWZhDftdshXSh", # change as desired and add as environment variable
     session_cookie = "lightcast_consulting_cloud_app_session",
-    max_age = 3600 # Time in seconds the current session lasts
+    max_age = 3600 # time in seconds the current session lasts
 )
 
 @app.get("/")
@@ -74,20 +79,32 @@ async def delete_member(memberID: int) -> dict:
 
 # ---------- END EXAMPLE FUNCTIONS ----------
 
-# Drive authentication
+# Google Drive authentication endpoints
+
 @app.get("/auth/login")
 async def login(request: Request):
+    """
+    Initiates Google OAuth2 authentication flow.
+    
+    Parameters: request is a FastAPI Request object.
+    Returns: a dictionary containing the authorization URL to redirect the user.
+    """
+    # Generate a random state token for cross-site request forgery (CSRF) attack prevention
     state = str(uuid.uuid4())
     request.session["state"] = state
     
+    # Load OAuth credentials of client
     script_dir = os.path.dirname(os.path.abspath(__file__))
     creds_path = os.path.join(script_dir, "creds.json")
     
+    # Create OAuth authentication flow with credentials and scopes
     flow = Flow.from_client_secrets_file(
         creds_path,
         scopes = SCOPES,
         redirect_uri = REDIRECT_URI
     )
+    
+    # Create and return authorization url which is used by frontend
     authorization_url, _ = flow.authorization_url(
         access_type = 'offline',
         state=state,
@@ -97,12 +114,24 @@ async def login(request: Request):
 
 @app.get("/auth/callback")
 async def callback(request: Request, code: str, state: str):
+    """
+    Handles OAuth callback after successful Google authentication.
+    
+    Parameters: request FastAPI Request object;
+                code is a string which is an authorization code from Google;
+                state is a string which is used to verify request.
+    Raises: HTTPException if state verification fails (done for security).
+    Returns: A status if the authentication was successful.
+    """
+    # Check state to prevent CSRF attacks
     if state != request.session.get("state"):
         raise HTTPException(status_code = 400, detail = "Invalid state parameter")
     
+    # Retrieve OAuth credentials of client
     script_dir = os.path.dirname(os.path.abspath(__file__))
     creds_path = os.path.join(script_dir, "creds.json")
     
+    # Finish OAuth flow and trade authorization code for access token 
     flow = Flow.from_client_secrets_file(
         creds_path,
         scopes = SCOPES,
@@ -110,23 +139,78 @@ async def callback(request: Request, code: str, state: str):
     )
     flow.fetch_token(code = code)
     
+    # Store credentials and return authentication status
     request.session["credentials"] = flow.credentials.to_json()
-    return {"status": "authenticated"}  
+    return {"status": "authenticated"}
 
 @app.get("/drive_data")
 async def drive_data(request: Request, include_trashed: bool = False):
+    """
+    Lists all files in the user's Google Drive, requires user to be 
+    authenticated to Google Drive through the app.
+    
+    Parameters: request is a FastAPI Request object;
+                include_trashed is a boolean which signals whether to include trashed files, defaults to False.
+    Returns: a list of file metadata from Google Drive.
+    """
     creds = credential_handler.get_creds(request.session)
     return drive.return_all_drive_data(include_trashed, creds)
 
 @app.get("/search")
 async def search(request: Request, file_name: str):
+    """
+    Searches for files in the user's Google Drive by file name, requires user to be 
+    authenticated to Google Drive through the app.
+    
+    Paramters: request is a FastAPI Request object;
+               file_name is a string of the name of file to search for.
+    Returns: a list of matching file metadata based on the file_name. 
+    """
     creds = credential_handler.get_creds(request.session)
     return drive.search_file(file_name, creds)
 
 @app.get("/download")
 async def download(request: Request, file_id: Union[str, None] = None, file_name: Union[str, None] = None):
+    """
+    Downloads a file from the user's Google Drive, requires user to be 
+    authenticated through the app to Google Drive.
+    
+    Parameters: request is a FastAPI Request object;
+                file_id is a string of the ID of file to download, defaults to None;
+                file_name is a string of the name to save the downloaded file as, defaults to None.
+    Returns: a string of the local path of the downloaded file.
+    """
     creds = credential_handler.get_creds(request.session)
     return drive.download_file(file_id, file_name, creds)
+
+@app.post("/file_upload")
+async def file_upload(data: dict):
+    """
+    Uploads a file to the user's Google Drive, requires user to be 
+    authenticated through the app to Google Drive.
+    
+    Paramters: data is a dictionary containing file_name, mimetype, and upload_filename.
+    Returns: the boolean True if the file upload to the Google Drive was successful, returns False otherwise.
+    """
+    creds = credential_handler.get_creds(request.session)
+    return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"), creds=creds)
+
+@app.get("/drive_structure")
+async def drive_structure(request: Request, folder_id: str = "root", indent: int = 0, include_trashed: bool = False):
+    """
+    Retrieves the hierarchical structure of the files in the user's Google Drive, 
+    requires user to be authenticated through the app to Google Drive.
+    
+    Parameters: request is a FastAPI Request object;
+                folder_id is a string of the starting folder ID, defaults to "root";
+                indent is an integer of the indentation level for the file hierarchy, defaults to 0;
+                include_trashed is a boolean which signals whether to include trashed items, defaults to False.
+    Returns: a list of each of the files in the drive and each element of the list contains the relevant file metadata related to the drive file structure.
+    """
+    creds = credential_handler.get_creds(request.session)
+    return drive.return_drive_structure(folder_id, indent, include_trashed, creds)
+
+# Local helper connection and its endpoints
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -168,18 +252,6 @@ async def get_scripts_folder():
     response = requests.get(f"{LOCAL_HELPER_URL}/scripts-folder")
     return response.json()
 
-@app.get("/drive_structure")
-async def drive_structure(request: Request, folder_id: str = 'root', indent: int = 0, include_trashed: bool = False):
-    creds = credential_handler.get_creds(request.session)
-    return drive.return_drive_structure(folder_id, indent, include_trashed, creds)
-
-#Upload processed file from application to Drive
-@app.post("/file_upload")
-async def file_upload(data: dict):
-    creds = credential_handler.get_creds(request.session)
-    return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"), creds=creds)
-
-#Save file from application to local device
 @app.get("/file_download")
 async def file_download(file_path: str):
     try:
