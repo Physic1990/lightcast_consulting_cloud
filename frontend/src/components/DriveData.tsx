@@ -24,7 +24,7 @@ export default function DriveData() {
   const [statusType, setStatusType] = useState<"success" | "error" | "info">(
     "info"
   ); // Status Type
-  const [processingTime, setProcessingTime] = useState(0); // Track processing time
+ // const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
 
   //Authentication failed; show login button
@@ -114,7 +114,7 @@ export default function DriveData() {
     setLoading(true);
     setStatus("Running model...");
     setStatusType("info");
-    setProcessingTime(0);
+    //setProcessingTime(0);
     const startTime = Date.now(); // Track start time
 
     try {
@@ -127,7 +127,7 @@ export default function DriveData() {
 
       const data = await response.json();
       const elapsedTime = (Date.now() - startTime) / 1000; // Calculate time in seconds
-      setProcessingTime(elapsedTime);
+      //setProcessingTime(elapsedTime);
       setLoading(false);
 
       // if (data.processed_file) {

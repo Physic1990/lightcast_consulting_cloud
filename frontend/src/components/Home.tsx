@@ -1,5 +1,5 @@
 import DriveData from "./DriveData";
-import FileSearch from "./FileSearch";
+//import FileSearch from "./FileSearch";
 import LCHeader from "./LCHeader";
 
 export default function Home() {

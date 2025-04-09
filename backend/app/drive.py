@@ -4,7 +4,7 @@ import os
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaFileUpload
-from . import credential_handler
+#from . import credential_handler
 import pandas as pd
 from fastapi import HTTPException
 
@@ -159,7 +159,7 @@ def save_file(file_name, mimetype, upload_filename, resumable=True, chunksize=26
             return True
         else:
             return False
-    except:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error uploading file: {e}")
 
 def return_drive_structure(folder_id = "root", indent = 0, include_trashed = False, creds = None):
