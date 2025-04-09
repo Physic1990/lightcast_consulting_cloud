@@ -97,7 +97,7 @@ async def login(request: Request):
     state = str(uuid.uuid4())
     request.session["state"] = state
     
-    # Load OAuth credentials of client Having hard time to find cred_jason (Causing Issue)
+    # Load OAuth credentials of client Having hard time to find cred_jason creds_path = "/var/app/current/creds.json" work with local host (Causing Issue)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     creds_path = os.path.join(script_dir, "creds.json")
     
