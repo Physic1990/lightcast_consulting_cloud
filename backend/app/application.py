@@ -9,12 +9,12 @@ import json
 from typing import Union
 import requests
 import os
-#from . import credential_handler # DELETE during AWS deployment
-# #from . import drive # DELETE during AWS deployment
+from . import credential_handler # DELETE during AWS deployment
+from . import drive # DELETE during AWS deployment
 # from credential_handler import get_creds
 # from drive import return_all_drive_data, search_file, download_file, save_file, return_drive_structure
-from credential_handler import *
-from drive import *
+# from credential_handler import *
+# from drive import *
 
 # Initialize FastAPI application
 app = FastAPI()
@@ -157,8 +157,8 @@ async def drive_data(request: Request, include_trashed: bool = False):
                 include_trashed is a boolean which signals whether to include trashed files, defaults to False.
     Returns: a list of file metadata from Google Drive.
     """
-    creds = get_creds(request.session)
-    return return_all_drive_data(include_trashed, creds)
+    creds = credential_handler.get_creds(request.session)
+    return drive.return_all_drive_data(include_trashed, creds)
 
 @app.get("/search")
 async def search(request: Request, file_name: str):
@@ -170,8 +170,8 @@ async def search(request: Request, file_name: str):
                file_name is a string of the name of file to search for.
     Returns: a list of matching file metadata based on the file_name. 
     """
-    creds = get_creds(request.session)
-    return search_file(file_name, creds)
+    creds = credential_handler.get_creds(request.session)
+    return drive.search_file(file_name, creds)
 
 @app.get("/download")
 async def download(request: Request, file_id: Union[str, None] = None, file_name: Union[str, None] = None):
@@ -184,8 +184,8 @@ async def download(request: Request, file_id: Union[str, None] = None, file_name
                 file_name is a string of the name to save the downloaded file as, defaults to None.
     Returns: a string of the local path of the downloaded file.
     """
-    creds = get_creds(request.session)
-    return download_file(file_id, file_name, creds)
+    creds = credential_handler.get_creds(request.session)
+    return drive.download_file(file_id, file_name, creds)
 
 @app.post("/file_upload")
 async def file_upload(request: Request, data: dict):
@@ -196,8 +196,8 @@ async def file_upload(request: Request, data: dict):
     Paramters: data is a dictionary containing file_name, mimetype, and upload_filename.
     Returns: the boolean True if the file upload to the Google Drive was successful, returns False otherwise.
     """
-    creds = get_creds(request.session)
-    return save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"), creds=creds)
+    creds = credential_handler.get_creds(request.session)
+    return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"), creds=creds)
 
 @app.get("/drive_structure")
 async def drive_structure(request: Request, folder_id: str = "root", indent: int = 0, include_trashed: bool = False):
@@ -211,8 +211,8 @@ async def drive_structure(request: Request, folder_id: str = "root", indent: int
                 include_trashed is a boolean which signals whether to include trashed items, defaults to False.
     Returns: a list of each of the files in the drive and each element of the list contains the relevant file metadata related to the drive file structure.
     """
-    creds = get_creds(request.session)
-    return return_drive_structure(folder_id, indent, include_trashed, creds)
+    creds = credential_handler.get_creds(request.session)
+    return drive.return_drive_structure(folder_id, indent, include_trashed, creds)
 
 # Local helper connection and its endpoints
 
@@ -225,12 +225,12 @@ LOCAL_HELPER_URL = "http://127.0.0.1:9000"
 async def run_local_model(request: Request, data: dict):
     file_id = data.get("file_id")
     script = data.get('script')
-    creds = get_creds(request.session)
+    creds = credential_handler.get_creds(request.session)
     if not file_id or not script:
         raise HTTPException(status_code=400, detail="File ID and script selection are required.")
 
     try:
-        file_path = download_file(file_id, creds=creds)
+        file_path = drive.download_file(file_id, creds=creds)
         if not file_path or not os.path.exists(file_path):
             raise HTTPException(status_code=500, detail="Failed to download file.")
 
