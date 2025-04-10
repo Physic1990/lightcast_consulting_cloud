@@ -1,11 +1,10 @@
 {
-  "installed": {
-    "client_id": "470751611719-q3q26gcduhf67mvagqqdifht6kof5rq8.apps.googleusercontent.com",
-    "project_id": "lightcastcloudconsulting",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_secret": "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",
-    "redirect_uris": ["http://localhost"]
+  "web": {
+    "client_id": "470751611719-7ll9jk8m6gvdd372n7833ej94p2dlas2.apps.googleusercontent.com",
+    "project_id":"lightcastcloudconsulting",
+    "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+    "token_uri":"https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret":"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"
   }
 }
