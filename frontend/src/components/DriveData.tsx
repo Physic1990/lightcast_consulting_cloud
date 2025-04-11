@@ -24,7 +24,7 @@ export default function DriveData() {
   const [statusType, setStatusType] = useState<"success" | "error" | "info">(
     "info"
   ); // Status Type
- // const [processingTime, setProcessingTime] = useState(0); // Track processing time
+  // const [processingTime, setProcessingTime] = useState(0); // Track processing time
   const [loading, setLoading] = useState(false); // Loading state
 
   //Authentication failed; show login button
@@ -101,7 +101,7 @@ export default function DriveData() {
 
     //Declare regex for file names
     // prettier-ignore
-    const filename_format = new RegExp(".*\.xl..?");
+    const filename_format = new RegExp(".*\.xl..?"); // eslint-disable-line no-useless-escape
 
     // Check if the selected file is an Excel file (.xl..?)
     if (!filename_format.test(selectedFileName)) {
@@ -202,18 +202,14 @@ export default function DriveData() {
       setDriveData(file.contents);
       handleSelectPath([...selectPath, file]);
     } else {
-      setSelectedFile(file.id);
-      setSelectedFileName(file.name);
+      if (selectedFile == file.id) {
+        setSelectedFile("");
+        setSelectedFileName("");
+      } else {
+        setSelectedFile(file.id);
+        setSelectedFileName(file.name);
+      }
     }
-  };
-
-  const exitFolder = () => {
-    if (selectPath.length > 1) {
-      setDriveData(selectPath[selectPath.length - 2].contents);
-    } else {
-      setDriveData(topLevelData);
-    }
-    handleSelectPath(selectPath.slice(0, selectPath.length - 1));
   };
 
   //Run through login flow
@@ -277,9 +273,9 @@ export default function DriveData() {
     <div style={{ padding: "20px", textAlign: "center" }}>
       {/* Breadcrumb navigation bar */}
       <Breadcrumb items={breadcrumbs} style={{ fontSize: "1.5em" }} />
-      <h2>Run Model on Selected File</h2>
+      <h2>Select a Model</h2>
 
-      {/* Drive Data Section */}
+      {/* Scripts Section */}
       <div
         style={{
           display: "inline-block",
@@ -287,6 +283,7 @@ export default function DriveData() {
           backgroundColor: "#f7f7f7",
         }}
       >
+        <h3>Run Script</h3>
         <ul style={{ textAlign: "center", alignContent: "center" }}>
           {scripts.length > 0 ? (
             scripts.map((script) => (
@@ -299,7 +296,7 @@ export default function DriveData() {
                     runModel(script);
                   }}
                 >
-                  Run {script}
+                  {script}
                 </Button>
               </li>
             ))
@@ -329,35 +326,6 @@ export default function DriveData() {
             flexWrap: "wrap",
           }}
         >
-          {selectPath.length > 0 ? (
-            <>
-              <div
-                key={"back"}
-                style={{
-                  width: "100%",
-                  marginLeft: "5%",
-                  height: "100%",
-                  flex: "1",
-                }}
-              >
-                <Button
-                  onClick={() => exitFolder()}
-                  style={{
-                    scale: "1.5",
-                    cursor: "pointer",
-                    boxShadow: "none",
-                    backgroundColor: "#C62828",
-                    color: "white",
-                  }}
-                >
-                  Back
-                </Button>
-              </div>
-              <br />
-            </>
-          ) : (
-            <></>
-          )}
           {authError ? (
             <div style={{ flex: "1" }}>
               {/* Bit obnoxious for now, should be changed */}
@@ -376,6 +344,8 @@ export default function DriveData() {
                     marginLeft: "5%",
                     height: "100%",
                     flex: "1",
+                    maxWidth: "28%",
+                    flexBasis: "100%",
                   }}
                 >
                   <Popover
