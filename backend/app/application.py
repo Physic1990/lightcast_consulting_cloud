@@ -1,6 +1,6 @@
 # Import modules and packages
 from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from google_auth_oauthlib.flow import Flow
@@ -203,6 +203,26 @@ async def test_remove_refresh_token(request: Request):
         return {"status": "Refresh token removed"}
     except Exception as e:
         return {"status": "Error", "message": str(e)}
+        
+@app.get("/dump_request")
+async def dump_request(request: Request):
+    """
+    Dumps various attributes of the Request object for debugging.
+    
+    Parameters: request is a FastAPI Request object.
+    Returns: A HTMLResponse of the request dumped.
+    """
+    output = f"Request URL: {request.url}\n"
+    output += f"Request Method: {request.method}\n"
+    output += f"Request Headers:\n"
+    for header, value in request.headers.items():
+        output += f"  {header}: {value}\n"
+    output += f"Request Query Parameters: {request.query_params}\n"
+    output += f"Request Client: {request.client}\n"
+    output += f"Request Cookies: {request.cookies}\n" # Important for checking session
+    output += f"Request State: {request.state}\n"
+
+    return HTMLResponse(f"<pre>{output}</pre>")
 
 @app.get("/drive_data")
 async def drive_data(request: Request, include_trashed: bool = False):
