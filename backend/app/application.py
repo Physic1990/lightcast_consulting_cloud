@@ -112,7 +112,8 @@ async def login(request: Request):
     authorization_url, _ = flow.authorization_url(
         access_type = 'offline',
         state=state,
-        include_granted_scopes = 'true'
+        include_granted_scopes = 'true',
+        prompt='consent'
     )
     return {"authorization_url": authorization_url}
 
