@@ -55,34 +55,6 @@ app.add_middleware(
 def read_root():
     return {"message": "Hello, Team! Welcome to the Lightcast Consulting Cloud API"}
 
-team_members = [
-    {"id": "1", "item": "Ian King"},
-    {"id": "2", "item": "Shashwot Niraula"},
-    {"id": "3", "item": "Andrew Plum"},
-    {"id": "4", "item": "Bibek Sharma"},
-    {"id": "5", "item": "Caleb Mouat"}
-]
-
-# ---------- BEGIN EXAMPLE FUNCTIONS ----------
-@app.get("/members", tags=["members"])
-async def get_members() -> dict:
-    return { "data": team_members }
-
-@app.post("/members", tags=["members"])
-async def add_member(member: dict) -> dict:
-    team_members.append(member)
-    return {"data": { "Member added." }}
-
-@app.delete("/members/{id}", tags=["members"])
-async def delete_member(memberID: int) -> dict:
-    for member in team_members:
-        if int(member["id"]) == memberID:
-            team_members.remove(member)
-            return {"data": f"Member with id {memberID} has been removed."}
-    return {"data": f"Member with id {memberID} not found"}
-
-# ---------- END EXAMPLE FUNCTIONS ----------
-
 # Google Drive authentication endpoints
 
 @app.get("/auth/login")
