@@ -147,6 +147,62 @@ async def callback(request: Request, code: str, state: str):
     # Store credentials and return authentication status
     request.session["credentials"] = flow.credentials.to_json()
     return {"status": "authenticated"}
+    
+@app.get("/test/expire_token")
+async def test_expire_token(request: Request):
+    """
+    Test endpoint to simulate an expired token.
+    
+    Parameters: request is a FastAPI Request object.
+    Returns: A status on if expiring the token was successful.
+    """
+    try:
+        creds_data = request.session.get("credentials")
+        if not creds_data:
+            return {"status": "No credentials found"}
+        
+        # Convert creds json to dictionary
+        creds_dict = json.loads(creds_data) if isinstance(creds_data, str) else eval(creds_data)
+        
+        # Set an expired timestamp - make sure it expires the token
+        if "token" in creds_dict and "expiry" in creds_dict:
+            from datetime import datetime, timedelta
+            expire_time = (datetime.now() - timedelta(hours = 2)).isoformat() + "Z"
+            creds_dict["expiry"] = expire_time
+                
+            # Update session with modified credentials
+            request.session["credentials"] = json.dumps(creds_dict)
+            return {"status": "Token expired artificially", "new_expiry": expire_time}
+        
+        return {"status": "Could not expire token - missing fields"}
+    except Exception as e:
+        return {"status": "Error", "message": str(e)}
+        
+@app.get("/test/remove_refresh_token")
+async def test_remove_refresh_token(request: Request):
+    """
+    Remove the refresh token to test re-authentication
+    
+    Parameters: request is a FastAPI Request object.
+    Returns: A status on if removing the refresh token was successful.
+    """
+    try:
+        creds_data = request.session.get("credentials")
+        if not creds_data:
+            return {"status": "No credentials found"}
+        
+        # Convert creds json to dictionary
+        creds_dict = json.loads(creds_data) if isinstance(creds_data, str) else eval(creds_data)
+        
+        # Remove refresh token and set token as expired
+        if "refresh_token" in creds_dict:
+            del creds_dict["refresh_token"]
+            
+        # Update session
+        request.session["credentials"] = json.dumps(creds_dict)
+        return {"status": "Refresh token removed"}
+    except Exception as e:
+        return {"status": "Error", "message": str(e)}
 
 @app.get("/drive_data")
 async def drive_data(request: Request, include_trashed: bool = False):
