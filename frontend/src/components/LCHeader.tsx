@@ -1,3 +1,4 @@
+//Frontend header - just includes branding now, could incorporate navigation for new pages
 export default function LCHeader() {
   return (
     <div>
