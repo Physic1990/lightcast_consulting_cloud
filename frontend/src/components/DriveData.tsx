@@ -43,7 +43,14 @@ export default function DriveData() {
     null
   );
 
-  // Function to get Drive data
+  /*
+   * Input: None
+   * Effect:
+   *    Retrieve Drive data from the backend and set it in driveData.
+   *    This data is in hierarchical, nested format.
+   *    topLevelData is set to the first layer of the hierarchy for quick navigation.
+   * Output: None
+   */
   const getDriveData = async () => {
     await fetch(`${API_URL}/drive_structure`, {
       credentials: "include",
@@ -90,7 +97,13 @@ export default function DriveData() {
       .catch((error) => console.error("Failed to get Drive data.", error));
   };
 
-  // Function to run the model
+  /*
+   * Input: selectedScript (string) representing the name of the script to run
+   * Effect:
+   *    Run Python script stored on the local machine on the selected Excel file.
+   *    Sets success/error status based on this operation.
+   * Output: None
+   */
   const runModel = async (selectedScript: string) => {
     if (!selectedFile) {
       alert("Please select a file first!");
@@ -132,7 +145,6 @@ export default function DriveData() {
 
       // if (data.processed_file) {
       if (data.success) {
-        // setStatus(`Model completed in ${elapsedTime.toFixed(2)} sec`);
         setStatus(`File delivered in ${elapsedTime.toFixed(2)} sec`);
         setStatusType("success");
         // setActiveData(data);
@@ -148,7 +160,13 @@ export default function DriveData() {
     }
   };
 
-  //Get scripts stored on the local system for display
+  /*
+   * Input: None
+   * Effect:
+   *    Get script names stored on the local machine for display
+   *    Sets "scripts" state to this list of strings
+   * Output: None
+   */
   const getScripts = async () => {
     await fetch(`${API_URL}/script_folder`, {
       credentials: "include",
@@ -158,7 +176,12 @@ export default function DriveData() {
       .catch((error) => console.error(error));
   };
 
-  //Set selectPath and reflect it in breadcrumbs
+  /*
+   * Input: newPath (DriveStructureData[]) represents all files/folders in the newly selected directory
+   * Effect:
+   *    Set select path and reflect it in breadcrumbs.
+   * Output: None
+   */
   const handleSelectPath = (newPath: DriveStructureData[]) => {
     setSelectPath(newPath);
 
@@ -190,6 +213,7 @@ export default function DriveData() {
     setBreadcrumbs(locBreadcrumbs);
   };
 
+  //Get drive and script data on page load
   useEffect(() => {
     console.log("Component mounted. Fetching drive data...");
     getDriveData();
@@ -197,6 +221,12 @@ export default function DriveData() {
     getScripts();
   }, []);
 
+  /*
+   * Input: file (DriveStructureData) is the clicked file object
+   * Effect:
+   *    Set selected file if it is not already selected - else deselect it
+   * Output: None
+   */
   const handleFileSelect = (file: DriveStructureData) => {
     if (file.type == "folder") {
       setDriveData(file.contents);
@@ -212,7 +242,13 @@ export default function DriveData() {
     }
   };
 
-  //Run through login flow
+  /*
+   * Input: None
+   * Effect:
+   *    Run through login flow
+   *    Calls backend's login endpoint and opens the returned callback link
+   * Output: None
+   */
   const loginFlow = async () => {
     await fetch(`${API_URL}/auth/login`, {
       credentials: "include",
@@ -222,7 +258,13 @@ export default function DriveData() {
       .catch((error) => console.error(error));
   };
 
-  //Exit folders until the correct one (or Home) has been reached; NOT CURRENTLY WORKING, BUTTONS CREATED FOR THIS ARE ONE REFRESH BEHIND
+  /*
+   * Input: targetFolder (string) is the folder in the Breadcrumbs path that the user would like to navigate to
+   * Effect:
+   *    Exit folders until the correct one (or Home) has been reached
+   *    Set the selectPath and driveData to the correct folder
+   * Output: None
+   */
   const rollBackCrumbs = (targetFolder: string) => {
     let folderDepth = selectPath.length;
     let folderName =
@@ -245,7 +287,15 @@ export default function DriveData() {
     }
   };
 
-  //Right click handling for file buttons
+  /*
+   * Input:
+   *   e (React.MouseEvent<HTMLElement>) is the mouse event triggered by the user right clicking on a file.
+   *   file (DriveStructureData) is the file that was right clicked on
+   * Effect:
+   *    Right click handling for file buttons
+   *    Closes the context menu if already open, otherwise opens it for the correct file
+   * Output: None
+   */
   const handleFileContext = (
     e: React.MouseEvent<HTMLElement>,
     file: DriveStructureData
@@ -258,7 +308,14 @@ export default function DriveData() {
     }
   };
 
-  //Allow copying file path from button
+  /*
+   * Input: fileName (string) is the name of the file that has been copied
+   * Effect:
+   *    Copies prefix + fileName to the user's keyboard
+   *    Prefix is edited to include all folders in the file path
+   *    Change prefix to be equal to the proper prefix based on the system
+   * Output: None
+   */
   const handlePathCopy = (fileName: string) => {
     let prefix = "/";
     if (selectPath.length > 0) {
@@ -269,6 +326,7 @@ export default function DriveData() {
     navigator.clipboard.writeText(prefix + fileName);
   };
 
+  //Display page
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
       {/* Breadcrumb navigation bar */}
@@ -348,6 +406,7 @@ export default function DriveData() {
                     flexBasis: "100%",
                   }}
                 >
+                  {/* Right-click popup menu */}
                   <Popover
                     content={
                       <div style={{ textAlign: "center" }}>

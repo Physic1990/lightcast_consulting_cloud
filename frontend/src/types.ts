@@ -1,13 +1,4 @@
-export interface MembersContextProps {
-  members:
-    | never[]
-    | {
-        id: number;
-        name: string;
-      }[];
-  fetchMembers: () => void;
-}
-
+//Type for files retrieved from Google Drive
 export interface DriveStructureData {
   name: string;
   id: string;

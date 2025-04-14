@@ -1,13 +1,12 @@
 import DriveData from "./DriveData";
-//import FileSearch from "./FileSearch";
 import LCHeader from "./LCHeader";
 
+//Display the home page for the Consulting Cloud frontend
 export default function Home() {
   return (
     <div>
       <div style={{ flex: 1, flexDirection: "row" }}>
         <LCHeader />
-        {/* <FileSearch /> */}
       </div>
 
       <DriveData />
