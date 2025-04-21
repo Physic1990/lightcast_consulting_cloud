@@ -4,6 +4,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from fastapi import HTTPException
+import json
 
 # OAuth Scopes for Google Drive
 SCOPES = ["https://www.googleapis.com/auth/drive.file",
@@ -36,10 +37,18 @@ def get_creds(session = None):
         if not creds_data:
             raise HTTPException(status_code = 401, detail = "Not authenticated")
         
-        creds = Credentials.from_authorized_user_info(eval(creds_data), SCOPES) # send json as a dictionary and scopes to get creds
+        creds_dict = json.loads(creds_data) if isinstance(creds_data, str) else eval(creds_data)
+        try:
+            if 'refresh_token' not in creds_dict:
+                raise HTTPException(status_code = 401, detail = "refresh_token missing from creds_dict, re-authentication required")
+            
+            creds = Credentials.from_authorized_user_info(eval(creds_data), SCOPES) # send json as a dictionary and scopes to get creds
+            
+            if creds and creds.expired and creds.refresh_token: # if credentials expired, refresh
+                creds.refresh(Request())
+                session["credentials"] = creds.to_json() # update passed in session with new credentials
+                
+            return creds
         
-        if creds and creds.expired and creds.refresh_token: # if credentials expired, refresh
-            creds.refresh(Request())
-            session["credentials"] = creds.to_json() # update passed in session with new credentials
-        
-        return creds
+        except Exception as e:
+            raise HTTPException(status_code = 401, detail = f"Try reauthenticating. Error: {str(e)}")

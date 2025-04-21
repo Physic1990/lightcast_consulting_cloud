@@ -1,6 +1,6 @@
 # Import modules and packages
 from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from google_auth_oauthlib.flow import Flow
@@ -65,6 +65,9 @@ async def login(request: Request):
     Parameters: request is a FastAPI Request object.
     Returns: a dictionary containing the authorization URL to redirect the user.
     """
+    if "credentials" in request.session:
+        del request.session["credentials"]
+    
     # Generate a random state token for cross-site request forgery (CSRF) attack prevention
     state = str(uuid.uuid4())
     request.session["state"] = state
@@ -120,6 +123,20 @@ async def callback(request: Request, code: str, state: str):
     request.session["credentials"] = flow.credentials.to_json()
     return {"status": "authenticated"}
     
+@app.get("/test/delete_creds")
+async def test_delete_creds(request: Request):
+    """
+    Test endpoint to delete credentials stored in session.
+    
+    Parameters: request is a FastAPI Request object.
+    Returns: A status on if expiring the token was successful.
+    """
+    if "credentials" in request.session:
+        del request.session["credentials"]
+        return {"status": "Credentials found and deleted"}
+    else:
+        return {"status": "No credentials found"}
+
 @app.get("/test/expire_token")
 async def test_expire_token(request: Request):
     """
@@ -196,6 +213,20 @@ async def dump_request(request: Request):
 
     return HTMLResponse(f"<pre>{output}</pre>")
 
+def exception_auth_redirect(e):
+    """
+    Used for if an exception occurs during the running of a drive related endpoint.
+    
+    Parameters: e is an exception.
+    Returns: an authorization URL as a result of redirecting to /auth/login.
+    """
+    if "missing fields refresh_token" in str(e):
+        print(f"An exception occured, missing fields refresh_token: {str(e)}")
+        return RedirectResponse("/auth/login", status_code=302)
+    else:
+        print(f"An exception occurred: {str(e)}")
+        return RedirectResponse("/auth/login", status_code=302)
+
 @app.get("/drive_data")
 async def drive_data(request: Request, include_trashed: bool = False):
     """
@@ -206,8 +237,11 @@ async def drive_data(request: Request, include_trashed: bool = False):
                 include_trashed is a boolean which signals whether to include trashed files, defaults to False.
     Returns: a list of file metadata from Google Drive.
     """
-    creds = credential_handler.get_creds(request.session)
-    return drive.return_all_drive_data(include_trashed, creds)
+    try:
+        creds = credential_handler.get_creds(request.session)
+        return drive.return_all_drive_data(include_trashed, creds)
+    except HTTPException as e:
+        return exception_auth_redirect(e)
 
 @app.get("/search")
 async def search(request: Request, file_name: str):
@@ -219,8 +253,11 @@ async def search(request: Request, file_name: str):
                file_name is a string of the name of file to search for.
     Returns: a list of matching file metadata based on the file_name. 
     """
-    creds = credential_handler.get_creds(request.session)
-    return drive.search_file(file_name, creds)
+    try:
+        creds = credential_handler.get_creds(request.session)
+        return drive.search_file(file_name, creds)
+    except HTTPException as e:
+        return exception_auth_redirect(e)
 
 @app.get("/download")
 async def download(request: Request, file_id: Union[str, None] = None, file_name: Union[str, None] = None):
@@ -233,8 +270,11 @@ async def download(request: Request, file_id: Union[str, None] = None, file_name
                 file_name is a string of the name to save the downloaded file as, defaults to None.
     Returns: a string of the local path of the downloaded file.
     """
-    creds = credential_handler.get_creds(request.session)
-    return drive.download_file(file_id, file_name, creds)
+    try:
+        creds = credential_handler.get_creds(request.session)
+        return drive.download_file(file_id, file_name, creds)
+    except HTTPException as e:
+        return exception_auth_redirect(e)
 
 @app.post("/file_upload")
 async def file_upload(request: Request, data: dict):
@@ -245,14 +285,19 @@ async def file_upload(request: Request, data: dict):
     Paramters: data is a dictionary containing file_name, mimetype, and upload_filename.
     Returns: the boolean True if the file upload to the Google Drive was successful, returns False otherwise.
     """
-    creds = credential_handler.get_creds(request.session)
-    return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"), creds=creds)
+    try:
+        creds = credential_handler.get_creds(request.session)
+        return drive.save_file(file_name=data.get("file_name"),mimetype=data.get("mimetype"),upload_filename=data.get("upload_filename"), creds=creds)
+    except HTTPException as e:
+        return exception_auth_redirect(e)
 
 @app.get("/drive_structure")
 async def drive_structure(request: Request, folder_id: str = "root", indent: int = 0, include_trashed: bool = False):
     """
     Retrieves the hierarchical structure of the files in the user's Google Drive, 
-    requires user to be authenticated through the app to Google Drive.
+    requires user to be authenticated through the app to Google Drive. 
+    Has extra cases because this function is currently used to test if the user is 
+    currently authorized to bring up the login button on the frontend.
     
     Parameters: request is a FastAPI Request object;
                 folder_id is a string of the starting folder ID, defaults to "root";
@@ -260,8 +305,15 @@ async def drive_structure(request: Request, folder_id: str = "root", indent: int
                 include_trashed is a boolean which signals whether to include trashed items, defaults to False.
     Returns: a list of each of the files in the drive and each element of the list contains the relevant file metadata related to the drive file structure.
     """
-    creds = credential_handler.get_creds(request.session)
-    return drive.return_drive_structure(folder_id, indent, include_trashed, creds)
+    if "credentials" not in request.session: # case that frontend calls to bring up login button to authenticate
+        creds = credential_handler.get_creds(request.session)
+        return drive.return_drive_structure(folder_id, indent, include_trashed, creds)
+    else: # case when there are credentials, which is almost all other cases
+        try: # case which actually retrieves the data
+            creds = credential_handler.get_creds(request.session)
+            return drive.return_drive_structure(folder_id, indent, include_trashed, creds)
+        except HTTPException as e: # case which handles when refresh token missing
+            return exception_auth_redirect(e)
 
 # Local helper connection and its endpoints
 
