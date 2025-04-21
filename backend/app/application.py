@@ -123,6 +123,20 @@ async def callback(request: Request, code: str, state: str):
     request.session["credentials"] = flow.credentials.to_json()
     return {"status": "authenticated"}
     
+@app.get("/is_authenticated")
+async def is_authenticated(request: Request):
+    """
+    Checks if the user is authenticated.
+
+    Parameters: request is a FastAPI Request object.
+    Returns: a dictionary indicating whether the user is authenticated.
+    """
+    try:
+        credential_handler.get_creds(request.session)
+        return {"status": "authenticated"}  # User is authenticated
+    except HTTPException:
+        return {"status": "not authenticated"}  # User is not authenticated
+    
 @app.get("/test/delete_creds")
 async def test_delete_creds(request: Request):
     """
